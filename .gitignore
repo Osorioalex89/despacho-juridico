@@ -1,0 +1,9 @@
+# Ignorar carpetas pesadas de dependencias
+node_modules/
+
+# Ignorar archivos de configuración local y secretos (Seguridad RNF01)
+.env
+
+# Ignorar carpetas de distribución/compilación
+dist/
+build/
