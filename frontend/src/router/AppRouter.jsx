@@ -1,4 +1,6 @@
 
+import ClientsPage from '../features/clients/ClientsPage'
+import ClientForm from '../features/clients/ClientForm'
 import DashboardPage from '../features/dashboard/DashboardPage'
 import PanelLayout from '../components/layout/PanelLayout'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
@@ -72,9 +74,17 @@ export default function AppRouter() {
         } />
         <Route path="/panel/clientes" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
-            <PanelLayout>
-              <Placeholder title="Gestión de Clientes" />
-            </PanelLayout>
+            <PanelLayout><ClientsPage /></PanelLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/panel/clientes/nuevo" element={
+          <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
+            <PanelLayout><ClientForm /></PanelLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/panel/clientes/:id/editar" element={
+          <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
+            <PanelLayout><ClientForm /></PanelLayout>
           </ProtectedRoute>
         } />
         <Route path="/panel/casos" element={

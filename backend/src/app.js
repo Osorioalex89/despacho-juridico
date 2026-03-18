@@ -1,3 +1,4 @@
+import clientRoutes from './routes/clients.routes.js'
 import express    from 'express'
 import cors       from 'cors'
 import dotenv     from 'dotenv'
@@ -17,6 +18,7 @@ app.use(express.json())
 
 // Rutas de la API
 app.use('/api/auth', authRoutes)
+app.use('/api/clientes', clientRoutes)
 
 // Ruta de prueba
 app.get('/', (req, res) => {
