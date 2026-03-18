@@ -65,11 +65,11 @@ export default function Sidebar() {
       <div className="px-4 py-5 border-b border-[#2d5282]">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-[#e8d48a] rounded-lg flex items-center justify-center flex-shrink-0">
-            <Scale size={18} className="text-[#1e3a5f]" strokeWidth={2.5}/>
+            <Scale size={18} className="text-[#1e3a5f]" strokeWidth={2.5} />
           </div>
           <div>
-            <p className="text-[#f0e6c8] text-sm font-medium leading-tight">Despacho</p>
-            <p className="text-[#7a9abf] text-xs leading-tight">Jurídico</p>
+            <p className="text-[#f0e6c8] text-sm font-medium leading-tight">Lic. Oracio</p>
+            <p className="text-[#7a9abf] text-xs leading-tight">Sánchez Cerino</p>
           </div>
         </div>
       </div>
@@ -81,14 +81,13 @@ export default function Sidebar() {
             key={path}
             to={path}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                isActive
-                  ? 'bg-[#2d5282] text-[#e8d48a] font-medium'
-                  : 'text-[#7a9abf] hover:bg-[#2d5282] hover:text-[#c8daf0]'
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${isActive
+                ? 'bg-[#2d5282] text-[#e8d48a] font-medium'
+                : 'text-[#7a9abf] hover:bg-[#2d5282] hover:text-[#c8daf0]'
               }`
             }
           >
-            <Icon size={16}/>
+            <Icon size={16} />
             {label}
           </NavLink>
         ))}
@@ -96,18 +95,17 @@ export default function Sidebar() {
         {/* Solo abogado ve gestión de usuarios */}
         {canManageUsers && (
           <>
-            <div className="border-t border-[#2d5282] my-3"/>
+            <div className="border-t border-[#2d5282] my-3" />
             <NavLink
               to="/panel/usuarios"
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                  isActive
-                    ? 'bg-[#2d5282] text-[#e8d48a] font-medium'
-                    : 'text-[#7a9abf] hover:bg-[#2d5282] hover:text-[#c8daf0]'
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${isActive
+                  ? 'bg-[#2d5282] text-[#e8d48a] font-medium'
+                  : 'text-[#7a9abf] hover:bg-[#2d5282] hover:text-[#c8daf0]'
                 }`
               }
             >
-              <Users size={16}/>
+              <Users size={16} />
               Usuarios
             </NavLink>
           </>
@@ -133,7 +131,7 @@ export default function Sidebar() {
                      text-[#7a9abf] hover:bg-[#2d5282] hover:text-red-400
                      transition-colors text-xs"
         >
-          <LogOut size={14}/>
+          <LogOut size={14} />
           Cerrar sesión
         </button>
       </div>

@@ -1,4 +1,5 @@
 
+import DashboardPage from '../features/dashboard/DashboardPage'
 import PanelLayout from '../components/layout/PanelLayout'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
@@ -25,10 +26,10 @@ function ProtectedRoute({ children, requiredRoles = [] }) {
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (requiredRoles.length > 0 && !requiredRoles.includes(user?.rol)) {
     const roleHome = {
-      abogado:    '/panel/dashboard',
+      abogado: '/panel/dashboard',
       secretario: '/panel/dashboard',
-      cliente:    '/cliente/mis-casos',
-      usuario:    '/pendiente',
+      cliente: '/cliente/mis-casos',
+      usuario: '/pendiente',
     }
     return <Navigate to={roleHome[user?.rol] ?? '/login'} replace />
   }
@@ -40,10 +41,10 @@ function RootRedirect() {
   if (loading) return null
   if (!isAuthenticated) return <Navigate to="/login" replace />
   const destinations = {
-    abogado:    '/panel/dashboard',
+    abogado: '/panel/dashboard',
     secretario: '/panel/dashboard',
-    cliente:    '/cliente/mis-casos',
-    usuario:    '/pendiente',
+    cliente: '/cliente/mis-casos',
+    usuario: '/pendiente',
   }
   return <Navigate to={destinations[user?.rol] ?? '/login'} replace />
 }
@@ -52,97 +53,98 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/login"    element={<LoginPage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/registro" element={<Placeholder title="Crear cuenta" badge="Público" />} />
 
         <Route path="/pendiente" element={
           <ProtectedRoute requiredRoles={['usuario']}>
             <Placeholder title="Cuenta en revisión" badge="Pendiente de aprobación" />
           </ProtectedRoute>
-        }/>
+        } />
+
 
         <Route path="/panel/dashboard" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
             <PanelLayout>
-              <Placeholder title="Dashboard" badge="Panel interno" />
+              <DashboardPage />
             </PanelLayout>
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/panel/clientes" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
             <PanelLayout>
               <Placeholder title="Gestión de Clientes" />
             </PanelLayout>
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/panel/casos" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
             <PanelLayout>
               <Placeholder title="Casos Jurídicos" />
             </PanelLayout>
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/panel/casos/nuevo" element={
           <ProtectedRoute requiredRoles={['abogado']}>
             <PanelLayout>
               <Placeholder title="Nuevo Caso" badge="Solo abogado" />
             </PanelLayout>
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/panel/casos/:id/editar" element={
           <ProtectedRoute requiredRoles={['abogado']}>
             <PanelLayout>
               <Placeholder title="Editar Caso" badge="Solo abogado" />
             </PanelLayout>
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/panel/agenda" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
             <PanelLayout>
               <Placeholder title="Agenda de Citas" />
             </PanelLayout>
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/panel/usuarios-pendientes" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
             <PanelLayout>
               <Placeholder title="Solicitudes de Acceso" badge="Por aprobar" />
             </PanelLayout>
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/panel/usuarios" element={
           <ProtectedRoute requiredRoles={['abogado']}>
             <PanelLayout>
               <Placeholder title="Gestión de Usuarios" badge="Solo abogado" />
             </PanelLayout>
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/panel/documentos" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
             <PanelLayout>
               <Placeholder title="Documentos" />
             </PanelLayout>
           </ProtectedRoute>
-        }/>
+        } />
 
         <Route path="/cliente/mis-casos" element={
           <ProtectedRoute requiredRoles={['cliente']}>
             <Placeholder title="Mis Casos" badge="Portal cliente" />
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/cliente/mis-citas" element={
           <ProtectedRoute requiredRoles={['cliente']}>
             <Placeholder title="Mis Citas" />
           </ProtectedRoute>
-        }/>
+        } />
         <Route path="/cliente/solicitar-cita" element={
           <ProtectedRoute requiredRoles={['cliente']}>
             <Placeholder title="Solicitar Cita" />
           </ProtectedRoute>
-        }/>
+        } />
 
-        <Route path="/"  element={<RootRedirect />} />
-        <Route path="*"  element={<Navigate to="/" replace />} />
+        <Route path="/" element={<RootRedirect />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   )
