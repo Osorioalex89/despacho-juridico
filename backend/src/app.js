@@ -1,4 +1,4 @@
-
+import appointmentRoutes from './routes/appointments.routes.js'
 import caseRoutes from './routes/cases.routes.js'
 import clientRoutes from './routes/clients.routes.js'
 import express    from 'express'
@@ -17,12 +17,14 @@ const PORT = process.env.PORT || 3001
 // Middlewares globales
 app.use(cors())
 app.use(express.json())
-app.use('/api/casos', caseRoutes)
+
 
 
 // Rutas de la API
 app.use('/api/auth', authRoutes)
 app.use('/api/clientes', clientRoutes)
+app.use('/api/casos', caseRoutes)
+app.use('/api/citas', appointmentRoutes)
 
 // Ruta de prueba
 app.get('/', (req, res) => {
