@@ -1,3 +1,5 @@
+
+import caseRoutes from './routes/cases.routes.js'
 import clientRoutes from './routes/clients.routes.js'
 import express    from 'express'
 import cors       from 'cors'
@@ -15,6 +17,8 @@ const PORT = process.env.PORT || 3001
 // Middlewares globales
 app.use(cors())
 app.use(express.json())
+app.use('/api/casos', caseRoutes)
+
 
 // Rutas de la API
 app.use('/api/auth', authRoutes)

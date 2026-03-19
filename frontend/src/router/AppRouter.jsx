@@ -1,4 +1,5 @@
-
+import CasesPage from '../features/cases/CasesPage'
+import CaseForm from '../features/cases/CaseForm'
 import ClientsPage from '../features/clients/ClientsPage'
 import ClientForm from '../features/clients/ClientForm'
 import DashboardPage from '../features/dashboard/DashboardPage'
@@ -89,9 +90,17 @@ export default function AppRouter() {
         } />
         <Route path="/panel/casos" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
-            <PanelLayout>
-              <Placeholder title="Casos Jurídicos" />
-            </PanelLayout>
+            <PanelLayout><CasesPage /></PanelLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/panel/casos/nuevo" element={
+          <ProtectedRoute requiredRoles={['abogado']}>
+            <PanelLayout><CaseForm /></PanelLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/panel/casos/:id/editar" element={
+          <ProtectedRoute requiredRoles={['abogado']}>
+            <PanelLayout><CaseForm /></PanelLayout>
           </ProtectedRoute>
         } />
         <Route path="/panel/casos/nuevo" element={
