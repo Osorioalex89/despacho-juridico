@@ -40,144 +40,82 @@ export default function LoginPage() {
       {/* Fuente profesional desde Google Fonts */}
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
 
-      <div className="min-h-screen flex items-center justify-center relative overflow-hidden"
-           style={{ background: 'linear-gradient(135deg, #0a1628 0%, #1e3a5f 45%, #2d5282 100%)' }}>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden"
+     style={{
+       backgroundImage: 'url(/src/assets/fondo-clinica.jpg)',
+       backgroundSize: 'cover',
+       backgroundPosition: 'center',
+     }}>
 
-        {/* Círculos decorativos de fondo */}
-        <div style={{
-          position: 'absolute', top: '-100px', left: '-100px',
-          width: '500px', height: '500px', borderRadius: '50%',
-          border: '1px solid rgba(255,255,255,0.05)',
-        }}/>
-        <div style={{
-          position: 'absolute', top: '-50px', left: '-50px',
-          width: '350px', height: '350px', borderRadius: '50%',
-          border: '1px solid rgba(255,255,255,0.05)',
-        }}/>
-        <div style={{
-          position: 'absolute', bottom: '-120px', right: '-120px',
-          width: '600px', height: '600px', borderRadius: '50%',
-          border: '1px solid rgba(255,255,255,0.05)',
-        }}/>
-        <div style={{
-          position: 'absolute', bottom: '-60px', right: '-60px',
-          width: '400px', height: '400px', borderRadius: '50%',
-          border: '1px solid rgba(255,255,255,0.05)',
-        }}/>
+  {/* Overlay mejorado: Menos opaco y con desenfoque */}
+  <div style={{
+    position: 'absolute', 
+    inset: 0,
+   
+    background: 'linear-gradient(135deg, rgba(10,22,40,0.7) 0%, rgba(30,58,95,0.5) 100%)',
+    backdropFilter: 'blur(3px)', 
+    zIndex: 1,
+  }}/>
 
-        {/* Balanza SVG decorativa de fondo */}
+       
+        {/* Card principal con efecto Cristal */}
         <div style={{
-          position: 'absolute', right: '8%', top: '50%',
-          transform: 'translateY(-50%)', opacity: 0.04,
-        }}>
-          <svg viewBox="0 0 300 300" width="500" height="500" fill="none">
-            <line x1="150" y1="30" x2="150" y2="240" stroke="white" strokeWidth="4"/>
-            <line x1="60"  y1="90" x2="240" y2="90" stroke="white" strokeWidth="4"/>
-            <line x1="60"  y1="90" x2="30"  y2="150" stroke="white" strokeWidth="3"/>
-            <line x1="240" y1="90" x2="270" y2="150" stroke="white" strokeWidth="3"/>
-            <ellipse cx="30"  cy="158" rx="30" ry="12" stroke="white" strokeWidth="3"/>
-            <ellipse cx="270" cy="158" rx="30" ry="12" stroke="white" strokeWidth="3"/>
-            <circle cx="150" cy="30" r="8" fill="white"/>
-            <line x1="100" y1="240" x2="200" y2="240" stroke="white" strokeWidth="4"/>
-            <line x1="150" y1="240" x2="150" y2="265" stroke="white" strokeWidth="4"/>
-            <line x1="110" y1="265" x2="190" y2="265" stroke="white" strokeWidth="6"/>
-          </svg>
-        </div>
-
-        {/* Card principal */}
-        <div style={{
-          background: 'rgba(255,255,255,0.97)',
-          backdropFilter: 'blur(20px)',
+         
+          background: 'rgba(0, 0, 0, 0.45)', 
+          
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+         
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+      
           borderRadius: '24px',
           padding: '48px 52px',
           width: '100%',
           maxWidth: '480px',
           margin: '24px',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+          
+          boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
+          
           position: 'relative',
           zIndex: 10,
         }}>
 
-          {/* Logo y nombre */}
+          {/* Logo y nombre con ajustes de contraste */}
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
             <div style={{
               width: '64px', height: '64px',
               background: 'linear-gradient(135deg, #1e3a5f, #2d5282)',
-              borderRadius: '16px',
+              borderRadius: '18px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 16px',
-              boxShadow: '0 8px 20px rgba(30,58,95,0.3)',
+              margin: '0 auto 18px',
+              boxShadow: '0 10px 20px rgba(30,58,95,0.2)',
             }}>
               <Scale size={28} color="#e8d48a" strokeWidth={2.5}/>
             </div>
             <h1 style={{
               fontFamily: "'Playfair Display', Georgia, serif",
-              fontSize: '26px',
-              fontWeight: '700',
-              color: '#0d1f3c',
-              margin: '0 0 4px',
+              fontSize: '26px', fontWeight: '700',
+              color: '#ffffff', margin: '0 0 4px',
               letterSpacing: '-0.3px',
             }}>
               Lic. Horacio Sánchez Cerino
             </h1>
             <p style={{
               fontFamily: "'Inter', sans-serif",
-              fontSize: '13px',
-              color: '#64748b',
-              margin: '0 0 6px',
-              letterSpacing: '0.5px',
-              textTransform: 'uppercase',
+              fontSize: '12px', fontWeight: '600',
+              color: '#ffffff', margin: '0',
+              letterSpacing: '0.8px', textTransform: 'uppercase',
             }}>
               Asesoría Jurídica Profesional
             </p>
-            <div style={{
-              width: '48px', height: '2px',
-              background: '#e8d48a',
-              margin: '12px auto 0',
-              borderRadius: '2px',
-            }}/>
           </div>
 
-          {/* Título formulario */}
-          <div style={{ marginBottom: '28px' }}>
-            <h2 style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: '20px',
-              fontWeight: '600',
-              color: '#1e293b',
-              margin: '0 0 6px',
-            }}>
-              Iniciar sesión
-            </h2>
-            <p style={{
-              fontFamily: "'Inter', sans-serif",
-              fontSize: '14px',
-              color: '#94a3b8',
-              margin: 0,
-            }}>
-              Ingresa tus credenciales para acceder al sistema
-            </p>
-          </div>
-
-          {/* Error */}
-          {error && (
-            <div style={{
-              background: '#fef2f2', border: '1px solid #fecaca',
-              color: '#dc2626', fontSize: '14px',
-              borderRadius: '10px', padding: '12px 16px',
-              marginBottom: '20px', fontFamily: "'Inter', sans-serif",
-            }}>
-              {error}
-            </div>
-          )}
-
-          {/* Formulario */}
+          {/* Formulario con Inputs semi-transparentes */}
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: '20px' }}>
               <label style={{
-                display: 'block', fontSize: '14px', fontWeight: '500',
-                color: '#374151', marginBottom: '8px',
-                fontFamily: "'Inter', sans-serif",
+                display: 'block', fontSize: '13px', fontWeight: '600',
+                color: '#ffffff', marginBottom: '8px', fontFamily: "'Inter', sans-serif",
               }}>
                 Correo electrónico
               </label>
@@ -189,23 +127,29 @@ export default function LoginPage() {
                 required
                 style={{
                   width: '100%', padding: '14px 16px',
-                  border: '1.5px solid #e2e8f0',
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
                   borderRadius: '12px', fontSize: '15px',
                   fontFamily: "'Inter', sans-serif",
-                  color: '#1e293b', background: '#f8fafc',
+                  color: '#ffffff', 
+                  background: 'rgba(255, 255, 255, 0.5)', // Input semi-transparente
                   outline: 'none', boxSizing: 'border-box',
-                  transition: 'border-color 0.2s',
+                  transition: 'all 0.2s',
                 }}
-                onFocus={e => e.target.style.borderColor = '#1e3a5f'}
-                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                onFocus={e => {
+                  e.target.style.borderColor = '#1e3a5f';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = 'rgba(0, 0, 0, 0.1)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.5)';
+                }}
               />
             </div>
 
-            <div style={{ marginBottom: '28px' }}>
+            <div style={{ marginBottom: '20px' }}>
               <label style={{
-                display: 'block', fontSize: '14px', fontWeight: '500',
-                color: '#374151', marginBottom: '8px',
-                fontFamily: "'Inter', sans-serif",
+                display: 'block', fontSize: '13px', fontWeight: '600',
+                color: '#ffffff', marginBottom: '8px', fontFamily: "'Inter', sans-serif",
               }}>
                 Contraseña
               </label>
@@ -217,15 +161,22 @@ export default function LoginPage() {
                 required
                 style={{
                   width: '100%', padding: '14px 16px',
-                  border: '1.5px solid #e2e8f0',
+                  border: '1px solid rgba(0, 0, 0, 0.1)',
                   borderRadius: '12px', fontSize: '15px',
                   fontFamily: "'Inter', sans-serif",
-                  color: '#1e293b', background: '#f8fafc',
+                  color: '#ffffff', 
+                  background: 'rgba(255, 255, 255, 0.5)', // Input semi-transparente
                   outline: 'none', boxSizing: 'border-box',
-                  transition: 'border-color 0.2s',
+                  transition: 'all 0.2s',
                 }}
-                onFocus={e => e.target.style.borderColor = '#1e3a5f'}
-                onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                onFocus={e => {
+                  e.target.style.borderColor = '#1e3a5f';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+                }}
+                onBlur={e => {
+                  e.target.style.borderColor = 'rgba(0, 0, 0, 0.1)';
+                  e.target.style.background = 'rgba(255, 255, 255, 0.5)';
+                }}
               />
             </div>
 
@@ -233,67 +184,38 @@ export default function LoginPage() {
               type="submit"
               disabled={loading}
               style={{
-                width: '100%', padding: '15px',
-                background: loading
-                  ? '#7a9abf'
-                  : 'linear-gradient(135deg, #1e3a5f, #2d5282)',
+                width: '100%', padding: '16px',
+                background: loading ? '#94a3b8' : '#1e3a5f',
                 color: 'white', border: 'none',
-                borderRadius: '12px', fontSize: '16px',
+                borderRadius: '14px', fontSize: '16px',
                 fontWeight: '600', fontFamily: "'Inter', sans-serif",
                 cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: '0 4px 15px rgba(30,58,95,0.35)',
-                letterSpacing: '0.3px',
-              }}>
-              {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
+                boxShadow: '0 8px 20px rgba(30,58,95,0.25)',
+                transition: 'transform 0.2s ease',
+              }}
+              onMouseOver={e => !loading && (e.target.style.transform = 'translateY(-2px)')}
+              onMouseOut={e => !loading && (e.target.style.transform = 'translateY(0)')}
+            >
+              {loading ? 'Verificando...' : 'Entrar al Sistema'}
             </button>
           </form>
 
-          {/* Crear cuenta */}
-          <div style={{ textAlign: 'center', marginTop: '24px' }}>
-            <p style={{
-              fontSize: '14px', color: '#94a3b8',
-              fontFamily: "'Inter', sans-serif",
-            }}>
-              ¿No tienes cuenta?{' '}
-              <a href="/registro" style={{
-                color: '#1e3a5f', fontWeight: '600',
-                textDecoration: 'none',
-              }}>
-                Regístrate aquí
-              </a>
-            </p>
-          </div>
-
-          {/* Contacto */}
+          {/* Sección de Contacto más minimalista */}
           <div style={{
-            marginTop: '28px', padding: '16px',
-            background: '#f8fafc', borderRadius: '12px',
-            border: '1px solid #e2e8f0',
+            marginTop: '32px', padding: '16px',
+            background: 'rgba(30, 58, 95, 0.04)', // Un tinte azul muy suave
+            borderRadius: '16px',
+            border: '1px solid rgba(30, 58, 95, 0.08)',
           }}>
-            <p style={{
-              fontSize: '11px', fontWeight: '600',
-              color: '#64748b', marginBottom: '8px',
-              textTransform: 'uppercase', letterSpacing: '0.8px',
-              fontFamily: "'Inter', sans-serif",
-            }}>
-              Contacto
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              {[
-                { icon: '📞', text: '913-100-44-13' },
-                { icon: '✉️', text: 'horaciocerino23@gmail.com' },
-                { icon: '📍', text: 'Francisco Javier Mina #25, Centla, Tab.' },
-              ].map(({ icon, text }) => (
-                <p key={text} style={{
-                  fontSize: '12px', color: '#64748b', margin: 0,
-                  fontFamily: "'Inter', sans-serif",
-                }}>
-                  {icon} {text}
-                </p>
-              ))}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <p style={{ fontSize: '12px', color: '#ffffff', margin: 0, fontFamily: "'Inter', sans-serif" }}>
+                📞 913-100-44-13
+              </p>
+              <p style={{ fontSize: '12px', color: '#ffffff', margin: 0, fontFamily: "'Inter', sans-serif" }}>
+                📍 Centla, Tabasco
+              </p>
             </div>
           </div>
-
         </div>
 
         {/* Footer */}
