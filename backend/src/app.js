@@ -5,6 +5,7 @@ import express    from 'express'
 import cors       from 'cors'
 import dotenv     from 'dotenv'
 import sequelize  from './config/database.js'
+import userRoutes from './routes/users.routes.js'
 
 // Rutas
 import authRoutes from './routes/auth.routes.js'
@@ -25,6 +26,8 @@ app.use('/api/auth', authRoutes)
 app.use('/api/clientes', clientRoutes)
 app.use('/api/casos', caseRoutes)
 app.use('/api/citas', appointmentRoutes)
+app.use('/api/usuarios', userRoutes)
+
 
 // Ruta de prueba
 app.get('/', (req, res) => {

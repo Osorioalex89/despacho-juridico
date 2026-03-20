@@ -12,6 +12,7 @@ import MisCitasPage from '../features/clientPortal/MisCitasPage'
 import SolicitarCitaPage from '../features/clientPortal/SolicitarCitaPage'
 import ClientNavbar from '../components/layout/ClientNavbar'
 import CaseDetail from '../features/cases/CaseDetail'
+import UsuariosPendientesPage from '../features/users/UsuariosPendientesPage'
 const Placeholder = ({ title, badge }) => (
   <div className="flex items-center justify-center h-screen bg-gray-50">
     <div className="text-center">
@@ -123,16 +124,12 @@ export default function AppRouter() {
 
         <Route path="/panel/usuarios-pendientes" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
-            <PanelLayout>
-              <Placeholder title="Solicitudes de Acceso" badge="Por aprobar" />
-            </PanelLayout>
+            <PanelLayout><UsuariosPendientesPage /></PanelLayout>
           </ProtectedRoute>
         } />
         <Route path="/panel/usuarios" element={
           <ProtectedRoute requiredRoles={['abogado']}>
-            <PanelLayout>
-              <Placeholder title="Gestión de Usuarios" badge="Solo abogado" />
-            </PanelLayout>
+            <PanelLayout><UsuariosPendientesPage /></PanelLayout>
           </ProtectedRoute>
         } />
         <Route path="/panel/documentos" element={
