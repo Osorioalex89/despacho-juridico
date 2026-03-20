@@ -11,6 +11,7 @@ import AgendaPage from '../features/appointments/AgendaPage'
 import MisCitasPage from '../features/clientPortal/MisCitasPage'
 import SolicitarCitaPage from '../features/clientPortal/SolicitarCitaPage'
 import ClientNavbar from '../components/layout/ClientNavbar'
+import CaseDetail from '../features/cases/CaseDetail'
 const Placeholder = ({ title, badge }) => (
   <div className="flex items-center justify-center h-screen bg-gray-50">
     <div className="text-center">
@@ -109,7 +110,11 @@ export default function AppRouter() {
             <PanelLayout><CaseForm /></PanelLayout>
           </ProtectedRoute>
         } />
-
+        <Route path="/panel/casos/:id" element={
+          <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
+            <PanelLayout><CaseDetail /></PanelLayout>
+          </ProtectedRoute>
+        } />
         <Route path="/panel/agenda" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
             <PanelLayout><AgendaPage /></PanelLayout>

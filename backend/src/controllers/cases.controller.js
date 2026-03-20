@@ -41,11 +41,28 @@ export const getCasoById = async (req, res) => {
   try {
     const caso = await Case.findByPk(req.params.id)
     if (!caso) return res.status(404).json({ message: 'Caso no encontrado' })
-    res.json(caso)
+
+    // Buscar cliente vinculado
+    let cliente = null
+    if (caso.id_cliente) {
+      const Client = (await import('../models/Client.js')).default
+      cliente = await Client.findByPk(caso.id_cliente)
+    }
+
+    // Buscar citas vinculadas
+    const Appointment = (await import('../models/Appointment.js')).default
+    const citas = await Appointment.findAll({
+      where: { id_caso: caso.id_caso },
+      order: [['fecha', 'ASC']],
+    })
+
+    res.json({ caso, cliente, citas })
   } catch (error) {
+    console.error('Error al obtener caso:', error)
     res.status(500).json({ message: 'Error interno del servidor' })
   }
 }
+
 
 // POST /api/casos
 export const createCaso = async (req, res) => {
