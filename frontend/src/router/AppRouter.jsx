@@ -8,9 +8,9 @@ import PanelLayout from '../components/layout/PanelLayout'
 import ClientsPage from '../features/clients/ClientsPage'
 import ClientForm from '../features/clients/ClientForm'
 import AgendaPage from '../features/appointments/AgendaPage'
-import MisCitasPage      from '../features/clientPortal/MisCitasPage'
+import MisCitasPage from '../features/clientPortal/MisCitasPage'
 import SolicitarCitaPage from '../features/clientPortal/SolicitarCitaPage'
-
+import ClientNavbar from '../components/layout/ClientNavbar'
 const Placeholder = ({ title, badge }) => (
   <div className="flex items-center justify-center h-screen bg-gray-50">
     <div className="text-center">
@@ -47,10 +47,10 @@ function RootRedirect() {
   if (loading) return null
   if (!isAuthenticated) return <Navigate to="/login" replace />
   const destinations = {
-    abogado:    '/panel/dashboard',
+    abogado: '/panel/dashboard',
     secretario: '/panel/dashboard',
-    cliente:    '/cliente/mis-citas',  
-    usuario:    '/pendiente',
+    cliente: '/cliente/mis-citas',
+    usuario: '/pendiente',
   }
   return <Navigate to={destinations[user?.rol] ?? '/login'} replace />
 }
@@ -139,19 +139,22 @@ export default function AppRouter() {
         } />
 
         {/* ── Portal del Cliente ── */}
+
         <Route path="/cliente/mis-citas" element={
           <ProtectedRoute requiredRoles={['cliente']}>
-            <MisCitasPage />
+            <ClientNavbar><MisCitasPage /></ClientNavbar>
           </ProtectedRoute>
         } />
         <Route path="/cliente/solicitar-cita" element={
           <ProtectedRoute requiredRoles={['cliente']}>
-            <SolicitarCitaPage />
+            <ClientNavbar><SolicitarCitaPage /></ClientNavbar>
           </ProtectedRoute>
         } />
         <Route path="/cliente/mis-casos" element={
           <ProtectedRoute requiredRoles={['cliente']}>
-            <Placeholder title="Mis Casos" badge="Portal cliente" />
+            <ClientNavbar>
+              <Placeholder title="Mis Casos" badge="Portal cliente" />
+            </ClientNavbar>
           </ProtectedRoute>
         } />
 
