@@ -32,7 +32,6 @@ router.get('/mis-casos', requireRole('cliente'), async (req, res) => {
   }
 })
 
-// ← ESTA VA DESPUÉS
 router.get('/:id',  requireRole('abogado', 'secretario'), getCasoById)
 router.post('/',    requireRole('abogado'),                createCaso)
 router.put('/:id',  requireRole('abogado'),                updateCaso)

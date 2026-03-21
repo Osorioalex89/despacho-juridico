@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAuth }             from '../../context/AuthContext'
+import { useAuth } from '../../context/AuthContext'
 import { getUsuarios, updateEstadoUsuario, deleteUsuario } from './usersService'
 import PageHeader from '../../components/layout/PageHeader'
 import {
@@ -8,34 +8,35 @@ import {
 } from 'lucide-react'
 
 const ROL_OPTS = [
-  { value: 'cliente',    label: 'Cliente'    },
+  { value: 'cliente', label: 'Cliente' },
   { value: 'secretario', label: 'Secretario' },
-  { value: 'abogado',    label: 'Abogado'    },
+  { value: 'abogado', label: 'Abogado' },
 ]
 
 const ESTADO_CONFIG = {
-  pendiente:  { label: 'Pendiente',  color: 'bg-amber-100 text-amber-700',  dot: 'bg-amber-400'  },
-  aprobado:   { label: 'Aprobado',   color: 'bg-green-100 text-green-700',  dot: 'bg-green-500'  },
-  rechazado:  { label: 'Rechazado',  color: 'bg-red-100 text-red-700',      dot: 'bg-red-400'    },
+  pendiente: { label: 'Pendiente', color: 'bg-amber-100 text-amber-700', dot: 'bg-amber-400' },
+  aprobado: { label: 'Aprobado', color: 'bg-green-100 text-green-700', dot: 'bg-green-500' },
+  rechazado: { label: 'Rechazado', color: 'bg-red-100 text-red-700', dot: 'bg-red-400' },
 }
 
 const ROL_CONFIG = {
-  abogado:    { color: 'bg-[#1e3a5f] text-white'          },
-  secretario: { color: 'bg-purple-100 text-purple-700'    },
-  cliente:    { color: 'bg-blue-100 text-blue-700'         },
-  usuario:    { color: 'bg-gray-100 text-gray-600'         },
+  abogado: { color: 'bg-[#1e3a5f] text-white' },
+  secretario: { color: 'bg-purple-100 text-purple-700' },
+  cliente: { color: 'bg-blue-100 text-blue-700' },
+  usuario: { color: 'bg-gray-100 text-gray-600' },
 }
 
-export default function UsuariosPendientesPage() {
+export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) {
+
   const { canManageUsers } = useAuth()
 
-  const [usuarios,    setUsuarios]    = useState([])
-  const [loading,     setLoading]     = useState(true)
-  const [search,      setSearch]      = useState('')
-  const [filtroEstado,setFiltroEstado]= useState('pendiente')
-  const [error,       setError]       = useState('')
-  const [rolModal,    setRolModal]    = useState(null) // { id, nombre }
-  const [rolSel,      setRolSel]      = useState('cliente')
+  const [usuarios, setUsuarios] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [filtroEstado, setFiltroEstado] = useState(defaultEstado)
+  const [error, setError] = useState('')
+  const [rolModal, setRolModal] = useState(null) // { id, nombre }
+  const [rolSel, setRolSel] = useState('cliente')
 
   const fetchUsuarios = async () => {
     setLoading(true)
@@ -55,6 +56,9 @@ export default function UsuariosPendientesPage() {
     setRolModal({ id, nombre })
     setRolSel('cliente')
   }
+  useEffect(() => {
+  setFiltroEstado(defaultEstado)
+}, [defaultEstado])
 
   const confirmarAprobacion = async () => {
     try {
@@ -82,14 +86,16 @@ export default function UsuariosPendientesPage() {
 
   // Stats
   const pendientes = usuarios.filter(u => u.estado === 'pendiente').length
-  const aprobados  = usuarios.filter(u => u.estado === 'aprobado').length
+  const aprobados = usuarios.filter(u => u.estado === 'aprobado').length
   const rechazados = usuarios.filter(u => u.estado === 'rechazado').length
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <PageHeader
-        title="Gestión de Usuarios"
-        subtitle="Aprobación y administración de cuentas"
+        title={defaultEstado === 'pendiente' ? 'Solicitudes de acceso' : 'Gestión de usuarios'}
+        subtitle={defaultEstado === 'pendiente'
+          ? 'Usuarios pendientes de aprobación'
+          : 'Todos los usuarios del sistema'}
       />
 
       <div className="flex-1 overflow-y-auto p-6 space-y-5">
@@ -97,15 +103,15 @@ export default function UsuariosPendientesPage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4">
           {[
-            { label: 'Pendientes de aprobación', val: pendientes, icon: Clock,       color: 'text-amber-600', bg: 'bg-amber-50'  },
-            { label: 'Usuarios aprobados',        val: aprobados,  icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50'  },
-            { label: 'Usuarios rechazados',       val: rechazados, icon: XCircle,     color: 'text-red-500',   bg: 'bg-red-50'    },
+            { label: 'Pendientes de aprobación', val: pendientes, icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
+            { label: 'Usuarios aprobados', val: aprobados, icon: ShieldCheck, color: 'text-green-600', bg: 'bg-green-50' },
+            { label: 'Usuarios rechazados', val: rechazados, icon: XCircle, color: 'text-red-500', bg: 'bg-red-50' },
           ].map(s => (
             <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4
                                           flex items-center gap-4">
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center
                                flex-shrink-0 ${s.bg}`}>
-                <s.icon size={18} className={s.color}/>
+                <s.icon size={18} className={s.color} />
               </div>
               <div>
                 <p className={`text-2xl font-medium ${s.color}`}>{s.val}</p>
@@ -118,7 +124,7 @@ export default function UsuariosPendientesPage() {
         {/* Filtros */}
         <div className="flex gap-3 flex-wrap items-center">
           <div className="relative flex-1 min-w-[200px]">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input type="text" value={search}
               onChange={e => { setSearch(e.target.value) }}
               placeholder="Buscar por nombre o correo..."
@@ -130,17 +136,16 @@ export default function UsuariosPendientesPage() {
           <div className="flex gap-2">
             {[
               { val: 'pendiente', label: 'Pendientes' },
-              { val: 'aprobado',  label: 'Aprobados'  },
+              { val: 'aprobado', label: 'Aprobados' },
               { val: 'rechazado', label: 'Rechazados' },
-              { val: '',          label: 'Todos'       },
+              { val: '', label: 'Todos' },
             ].map(opt => (
               <button key={opt.val}
                 onClick={() => setFiltroEstado(opt.val)}
-                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${
-                  filtroEstado === opt.val
+                className={`px-3 py-2 rounded-lg text-xs font-medium border transition-colors ${filtroEstado === opt.val
                     ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]'
                     : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400'
-                }`}>
+                  }`}>
                 {opt.label}
               </button>
             ))}
@@ -156,7 +161,7 @@ export default function UsuariosPendientesPage() {
             </div>
           ) : usuarios.length === 0 ? (
             <div className="text-center py-20">
-              <Users size={40} className="mx-auto text-gray-300 mb-3"/>
+              <Users size={40} className="mx-auto text-gray-300 mb-3" />
               <p className="text-gray-400 text-sm">
                 {filtroEstado === 'pendiente'
                   ? 'No hay solicitudes pendientes'
@@ -178,7 +183,7 @@ export default function UsuariosPendientesPage() {
               <tbody className="divide-y divide-gray-50">
                 {usuarios.map(u => {
                   const estadoCfg = ESTADO_CONFIG[u.estado] || ESTADO_CONFIG.pendiente
-                  const rolCfg    = ROL_CONFIG[u.rol]       || ROL_CONFIG.usuario
+                  const rolCfg = ROL_CONFIG[u.rol] || ROL_CONFIG.usuario
                   return (
                     <tr key={u.id_usuario} className="hover:bg-gray-50 transition-colors">
                       <td className="px-5 py-3.5">
@@ -199,7 +204,7 @@ export default function UsuariosPendientesPage() {
                       </td>
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-1.5">
-                          <span className={`w-2 h-2 rounded-full ${estadoCfg.dot}`}/>
+                          <span className={`w-2 h-2 rounded-full ${estadoCfg.dot}`} />
                           <span className="text-xs text-gray-600">{estadoCfg.label}</span>
                         </div>
                       </td>
@@ -215,7 +220,7 @@ export default function UsuariosPendientesPage() {
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-green-50
                                          hover:bg-green-100 text-green-700 rounded-lg
                                          text-xs font-medium transition-colors">
-                              <CheckCircle size={13}/> Aprobar
+                              <CheckCircle size={13} /> Aprobar
                             </button>
                           )}
                           {/* Rechazar */}
@@ -225,7 +230,7 @@ export default function UsuariosPendientesPage() {
                               className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50
                                          hover:bg-red-100 text-red-600 rounded-lg
                                          text-xs font-medium transition-colors">
-                              <XCircle size={13}/> Rechazar
+                              <XCircle size={13} /> Rechazar
                             </button>
                           )}
                           {/* Eliminar — solo abogado */}
@@ -234,7 +239,7 @@ export default function UsuariosPendientesPage() {
                               title="Eliminar"
                               className="p-1.5 text-gray-400 hover:text-red-500
                                          hover:bg-red-50 rounded-lg transition-colors">
-                              <Trash2 size={14}/>
+                              <Trash2 size={14} />
                             </button>
                           )}
                         </div>
@@ -251,11 +256,11 @@ export default function UsuariosPendientesPage() {
       {/* Modal de aprobación con selección de rol */}
       {rolModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center"
-             style={{ background: 'rgba(0,0,0,0.45)' }}>
+          style={{ background: 'rgba(0,0,0,0.45)' }}>
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm mx-4 p-6">
             <div className="flex items-center gap-3 mb-5">
               <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                <UserCheck size={20} className="text-green-600"/>
+                <UserCheck size={20} className="text-green-600" />
               </div>
               <div>
                 <h2 className="text-base font-medium text-gray-800">Aprobar usuario</h2>
@@ -271,11 +276,10 @@ export default function UsuariosPendientesPage() {
                 {ROL_OPTS.map(opt => (
                   <button key={opt.value}
                     onClick={() => setRolSel(opt.value)}
-                    className={`py-2.5 rounded-lg text-sm font-medium border transition-colors ${
-                      rolSel === opt.value
+                    className={`py-2.5 rounded-lg text-sm font-medium border transition-colors ${rolSel === opt.value
                         ? 'bg-[#1e3a5f] text-white border-[#1e3a5f]'
                         : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
-                    }`}>
+                      }`}>
                     {opt.label}
                   </button>
                 ))}

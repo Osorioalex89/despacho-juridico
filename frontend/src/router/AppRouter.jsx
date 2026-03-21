@@ -16,6 +16,8 @@ import UsuariosPendientesPage from '../features/users/UsuariosPendientesPage'
 import RegisterPage from '../features/auth/RegisterPage'
 import PendientePage from '../features/auth/PendientePage'
 import MisCasosPage from '../features/clientportal/MisCasosPage'
+import DocumentosPage from '../features/documents/DocumentosPage'
+
 
 
 
@@ -131,21 +133,20 @@ export default function AppRouter() {
 
         <Route path="/panel/usuarios-pendientes" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
-            <PanelLayout><UsuariosPendientesPage /></PanelLayout>
+            <PanelLayout><UsuariosPendientesPage defaultEstado="pendiente" /></PanelLayout>
           </ProtectedRoute>
         } />
         <Route path="/panel/usuarios" element={
           <ProtectedRoute requiredRoles={['abogado']}>
-            <PanelLayout><UsuariosPendientesPage /></PanelLayout>
+            <PanelLayout><UsuariosPendientesPage defaultEstado="" /></PanelLayout>
           </ProtectedRoute>
         } />
         <Route path="/panel/documentos" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
-            <PanelLayout>
-              <Placeholder title="Documentos" />
-            </PanelLayout>
+            <PanelLayout><DocumentosPage /></PanelLayout>
           </ProtectedRoute>
         } />
+
 
         {/* ── Portal del Cliente ── */}
 

@@ -68,7 +68,7 @@ export default function Sidebar() {
             <Scale size={18} className="text-[#1e3a5f]" strokeWidth={2.5} />
           </div>
           <div>
-            <p className="text-[#f0e6c8] text-sm font-medium leading-tight">Lic. Oracio</p>
+            <p className="text-[#f0e6c8] text-sm font-medium leading-tight">Lic. Horacio</p>
             <p className="text-[#7a9abf] text-xs leading-tight">Sánchez Cerino</p>
           </div>
         </div>
