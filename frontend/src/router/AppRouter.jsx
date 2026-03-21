@@ -13,6 +13,8 @@ import SolicitarCitaPage from '../features/clientPortal/SolicitarCitaPage'
 import ClientNavbar from '../components/layout/ClientNavbar'
 import CaseDetail from '../features/cases/CaseDetail'
 import UsuariosPendientesPage from '../features/users/UsuariosPendientesPage'
+import RegisterPage from '../features/auth/RegisterPage'
+
 const Placeholder = ({ title, badge }) => (
   <div className="flex items-center justify-center h-screen bg-gray-50">
     <div className="text-center">
@@ -64,7 +66,7 @@ export default function AppRouter() {
 
         {/* ── Públicas ── */}
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/registro" element={<Placeholder title="Crear cuenta" badge="Público" />} />
+       <Route path="/registro" element={<RegisterPage />} />
 
         {/* ── Usuario pendiente de aprobación ── */}
         <Route path="/pendiente" element={
