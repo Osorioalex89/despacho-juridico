@@ -8,3 +8,4 @@ export const updateEstadoCita  = (id, estado) => api.patch(`/citas/${id}/estado`
 export const deleteCita        = (id)         => api.delete(`/citas/${id}`)
 export const solicitarCita = (data)  => api.post('/citas/solicitar', data)
 export const getMisCitas   = ()      => api.get('/citas/mis-citas')
+export const getMisCasos = () => api.get('/casos/mis-casos')

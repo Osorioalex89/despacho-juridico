@@ -15,6 +15,9 @@ import CaseDetail from '../features/cases/CaseDetail'
 import UsuariosPendientesPage from '../features/users/UsuariosPendientesPage'
 import RegisterPage from '../features/auth/RegisterPage'
 import PendientePage from '../features/auth/PendientePage'
+import MisCasosPage from '../features/clientportal/MisCasosPage'
+
+
 
 
 const Placeholder = ({ title, badge }) => (
@@ -158,9 +161,7 @@ export default function AppRouter() {
         } />
         <Route path="/cliente/mis-casos" element={
           <ProtectedRoute requiredRoles={['cliente']}>
-            <ClientNavbar>
-              <Placeholder title="Mis Casos" badge="Portal cliente" />
-            </ClientNavbar>
+            <ClientNavbar><MisCasosPage /></ClientNavbar>
           </ProtectedRoute>
         } />
 
