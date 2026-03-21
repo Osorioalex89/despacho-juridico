@@ -14,6 +14,8 @@ import ClientNavbar from '../components/layout/ClientNavbar'
 import CaseDetail from '../features/cases/CaseDetail'
 import UsuariosPendientesPage from '../features/users/UsuariosPendientesPage'
 import RegisterPage from '../features/auth/RegisterPage'
+import PendientePage from '../features/auth/PendientePage'
+
 
 const Placeholder = ({ title, badge }) => (
   <div className="flex items-center justify-center h-screen bg-gray-50">
@@ -66,12 +68,12 @@ export default function AppRouter() {
 
         {/* ── Públicas ── */}
         <Route path="/login" element={<LoginPage />} />
-       <Route path="/registro" element={<RegisterPage />} />
+        <Route path="/registro" element={<RegisterPage />} />
 
         {/* ── Usuario pendiente de aprobación ── */}
         <Route path="/pendiente" element={
           <ProtectedRoute requiredRoles={['usuario']}>
-            <Placeholder title="Cuenta en revisión" badge="Pendiente de aprobación" />
+            <PendientePage />
           </ProtectedRoute>
         } />
 
