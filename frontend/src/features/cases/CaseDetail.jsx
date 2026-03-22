@@ -286,11 +286,11 @@ export default function CaseDetail() {
                       )}
                     </div>
                     <button
-                      onClick={() => navigate(`/panel/clientes/${cliente.id_cliente}`)}
+                      onClick={() => navigate(`/panel/clientes/${cliente.id_cliente}/editar`)}
                       className="mt-4 w-full text-center text-xs text-[#1e3a5f]
                                  hover:underline py-2 border border-gray-200
                                  rounded-lg hover:bg-gray-50 transition-colors">
-                      Ver perfil completo →
+                      Ver datos del cliente →
                     </button>
                   </div>
                 ) : (

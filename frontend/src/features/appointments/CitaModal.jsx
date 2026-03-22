@@ -73,6 +73,21 @@ export default function CitaModal({ cita, fechaInicial, clientes, onClose, onGua
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+          {/* Mensaje del cliente si existe */}
+{cita?.mensaje && (
+  <div style={{
+    background: '#fefce8',
+    border: '1px solid #fef08a',
+    borderRadius: '10px',
+    padding: '12px',
+    marginBottom: '4px',
+  }}>
+    <p className="text-xs font-medium text-amber-700 mb-1">
+      💬 Mensaje del cliente
+    </p>
+    <p className="text-sm text-amber-800">{cita.mensaje}</p>
+  </div>
+)}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700
                             text-sm rounded-lg px-3 py-2">{error}</div>

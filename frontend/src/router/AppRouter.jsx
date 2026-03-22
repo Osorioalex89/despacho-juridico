@@ -17,6 +17,7 @@ import RegisterPage from '../features/auth/RegisterPage'
 import PendientePage from '../features/auth/PendientePage'
 import MisCasosPage from '../features/clientportal/MisCasosPage'
 import DocumentosPage from '../features/documents/DocumentosPage'
+import ClientDetail from '../features/clients/ClientDetail'
 
 
 
@@ -104,7 +105,11 @@ export default function AppRouter() {
             <PanelLayout><ClientForm /></PanelLayout>
           </ProtectedRoute>
         } />
-
+        <Route path="/panel/clientes/:id" element={
+          <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
+            <PanelLayout><ClientDetail /></PanelLayout>
+          </ProtectedRoute>
+        } />
         <Route path="/panel/casos" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
             <PanelLayout><CasesPage /></PanelLayout>
