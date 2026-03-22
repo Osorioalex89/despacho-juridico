@@ -5,13 +5,13 @@ import api from '../../services/axios.config'
 import { Scale } from 'lucide-react'
 
 export default function LoginPage() {
-  const { login }  = useAuth()
-  const navigate   = useNavigate()
+  const { login } = useAuth()
+  const navigate = useNavigate()
 
-  const [correo,     setCorreo]     = useState('')
+  const [correo, setCorreo] = useState('')
   const [contrasena, setContrasena] = useState('')
-  const [error,      setError]      = useState('')
-  const [loading,    setLoading]    = useState(false)
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -21,15 +21,31 @@ export default function LoginPage() {
       const res = await api.post('/auth/login', { correo, contrasena })
       const { token, user } = res.data
       login(user, token)
-      if (user.estado === 'pendiente') { navigate('/pendiente'); return }
+
+      // ← CAMBIO AQUÍ: muestra mensaje en lugar de redirigir
+      if (user.estado === 'pendiente') {
+        setError('Tu cuenta está pendiente de aprobación. El despacho te dará acceso en breve.')
+        setLoading(false)
+        return
+      }
+
       const destinations = {
-        abogado:    '/panel/dashboard',
+        abogado: '/panel/dashboard',
         secretario: '/panel/dashboard',
-        cliente:    '/cliente/mis-citas',
+        cliente: '/cliente/mis-citas',
       }
       navigate(destinations[user.rol] ?? '/login')
     } catch (err) {
-      setError(err.response?.data?.message ?? 'Error al conectar con el servidor')
+      const msg = err.response?.data?.message
+      if (msg === 'Credenciales incorrectas') {
+        setError('El correo o la contraseña son incorrectos. Verifica tus datos.')
+      } else if (err.response?.status === 403) {
+        setError('Tu cuenta está desactivada. Contacta al despacho.')
+      } else if (!err.response) {
+        setError('No se pudo conectar con el servidor. Intenta más tarde.')
+      } else {
+        setError(msg ?? 'Error al iniciar sesión.')
+      }
     } finally {
       setLoading(false)
     }
@@ -38,44 +54,44 @@ export default function LoginPage() {
   return (
     <>
       {/* Fuente profesional desde Google Fonts */}
-      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+      <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
 
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden"
-     style={{
-       backgroundImage: 'url(/src/assets/fondo-clinica.jpg)',
-       backgroundSize: 'cover',
-       backgroundPosition: 'center',
-     }}>
+      <div className="min-h-screen flex items-center justify-center relative overflow-hidden"
+        style={{
+          backgroundImage: 'url(/src/assets/fondo-clinica.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}>
 
-  {/* Overlay mejorado: Menos opaco y con desenfoque */}
-  <div style={{
-    position: 'absolute', 
-    inset: 0,
-   
-    background: 'linear-gradient(135deg, rgba(10,22,40,0.7) 0%, rgba(30,58,95,0.5) 100%)',
-    backdropFilter: 'blur(3px)', 
-    zIndex: 1,
-  }}/>
+        {/* Overlay mejorado: Menos opaco y con desenfoque */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
 
-       
+          background: 'linear-gradient(135deg, rgba(10,22,40,0.7) 0%, rgba(30,58,95,0.5) 100%)',
+          backdropFilter: 'blur(3px)',
+          zIndex: 1,
+        }} />
+
+
         {/* Card principal con efecto Cristal */}
         <div style={{
-         
-          background: 'rgba(0, 0, 0, 0.45)', 
-          
+
+          background: 'rgba(0, 0, 0, 0.45)',
+
           backdropFilter: 'blur(8px)',
           WebkitBackdropFilter: 'blur(8px)',
-         
+
           border: '1px solid rgba(255, 255, 255, 0.1)',
-      
+
           borderRadius: '24px',
           padding: '48px 52px',
           width: '100%',
           maxWidth: '480px',
           margin: '24px',
-          
+
           boxShadow: '0 25px 50px rgba(0, 0, 0, 0.5)',
-          
+
           position: 'relative',
           zIndex: 10,
         }}>
@@ -90,7 +106,7 @@ export default function LoginPage() {
               margin: '0 auto 18px',
               boxShadow: '0 10px 20px rgba(30,58,95,0.2)',
             }}>
-              <Scale size={28} color="#e8d48a" strokeWidth={2.5}/>
+              <Scale size={28} color="#e8d48a" strokeWidth={2.5} />
             </div>
             <h1 style={{
               fontFamily: "'Playfair Display', Georgia, serif",
@@ -130,19 +146,21 @@ export default function LoginPage() {
                   border: '1px solid rgba(0, 0, 0, 0.1)',
                   borderRadius: '12px', fontSize: '15px',
                   fontFamily: "'Inter', sans-serif",
-                  color: '#ffffff', 
+                  color: '#ffffff',
                   background: 'rgba(255, 255, 255, 0.5)', // Input semi-transparente
                   outline: 'none', boxSizing: 'border-box',
                   transition: 'all 0.2s',
                 }}
                 onFocus={e => {
-                  e.target.style.borderColor = '#1e3a5f';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.9)';
-                }}
-                onBlur={e => {
-                  e.target.style.borderColor = 'rgba(0, 0, 0, 0.1)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.5)';
-                }}
+  e.target.style.borderColor = '#e8d48a'
+  e.target.style.background  = 'rgba(255,255,255,0.12)'
+  e.target.style.boxShadow   = '0 0 0 3px rgba(232,212,138,0.15)'
+}}
+onBlur={e => {
+  e.target.style.borderColor = 'rgba(255,255,255,0.15)'
+  e.target.style.background  = 'rgba(255,255,255,0.08)'
+  e.target.style.boxShadow   = 'none'
+}}
               />
             </div>
 
@@ -164,18 +182,20 @@ export default function LoginPage() {
                   border: '1px solid rgba(0, 0, 0, 0.1)',
                   borderRadius: '12px', fontSize: '15px',
                   fontFamily: "'Inter', sans-serif",
-                  color: '#ffffff', 
+                  color: '#ffffff',
                   background: 'rgba(255, 255, 255, 0.5)', // Input semi-transparente
                   outline: 'none', boxSizing: 'border-box',
                   transition: 'all 0.2s',
                 }}
                 onFocus={e => {
-                  e.target.style.borderColor = '#1e3a5f';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.9)';
+                  e.target.style.borderColor = '#e8d48a'
+                  e.target.style.background = 'rgba(255,255,255,0.12)'
+                  e.target.style.boxShadow = '0 0 0 3px rgba(232,212,138,0.15)'
                 }}
                 onBlur={e => {
-                  e.target.style.borderColor = 'rgba(0, 0, 0, 0.1)';
-                  e.target.style.background = 'rgba(255, 255, 255, 0.5)';
+                  e.target.style.borderColor = 'rgba(255,255,255,0.15)'
+                  e.target.style.background = 'rgba(255,255,255,0.08)'
+                  e.target.style.boxShadow = 'none'
                 }}
               />
             </div>
@@ -199,7 +219,21 @@ export default function LoginPage() {
               {loading ? 'Verificando...' : 'Entrar al Sistema'}
             </button>
           </form>
-
+          {/* Link crear cuenta */}
+          <p style={{
+            textAlign: 'center', marginTop: '20px',
+            fontSize: '13px', color: 'rgba(255,255,255,0.5)',
+            fontFamily: "'Inter', sans-serif",
+          }}>
+            ¿No tienes cuenta?{' '}
+            <a href="/registro" style={{
+              color: '#e8d48a',
+              fontWeight: '600',
+              textDecoration: 'none',
+            }}>
+              Créala aquí
+            </a>
+          </p>
           {/* Sección de Contacto más minimalista */}
           <div style={{
             marginTop: '32px', padding: '16px',

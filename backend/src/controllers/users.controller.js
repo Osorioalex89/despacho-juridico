@@ -37,13 +37,31 @@ export const updateEstadoUsuario = async (req, res) => {
       return res.status(400).json({ message: 'Estado inválido' })
     }
 
-    await usuario.update({
-      estado,
-      rol: estado === 'aprobado' ? (rol || 'cliente') : usuario.rol,
-    })
+    const rolFinal = estado === 'aprobado' ? (rol || 'cliente') : usuario.rol
+
+    await usuario.update({ estado, rol: rolFinal })
+
+    // Si se aprueba como cliente, crear registro en tabla clientes automáticamente
+    if (estado === 'aprobado' && rolFinal === 'cliente') {
+      const Client = (await import('../models/Client.js')).default
+
+      // Verificar que no exista ya
+      const existe = await Client.findOne({ where: { id_usuario: usuario.id_usuario } })
+
+      if (!existe) {
+        await Client.create({
+          id_usuario: usuario.id_usuario,
+          nombre:     usuario.nombre,
+          correo:     usuario.correo,
+          telefono:   '',
+          direccion:  '',
+        })
+      }
+    }
 
     res.json({ message: `Usuario ${estado} correctamente`, usuario })
   } catch (error) {
+    console.error(error)
     res.status(500).json({ message: 'Error interno del servidor' })
   }
 }
