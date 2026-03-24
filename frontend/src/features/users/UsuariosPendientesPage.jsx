@@ -87,8 +87,8 @@ const IconUsers = () => (
 
 export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) {
   const { canManageUsers } = useAuth()
-
-  const [usuarios,     setUsuarios]     = useState([])
+  const [usuarios, setUsuarios] = useState([])
+  const [todosUsuarios, setTodosUsuarios] = useState([])
   const [loading,      setLoading]      = useState(true)
   const [search,       setSearch]       = useState('')
   const [filtroEstado, setFiltroEstado] = useState(defaultEstado)
@@ -100,14 +100,15 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
   useEffect(() => { setFiltroEstado(defaultEstado) }, [defaultEstado])
 
   const fetchUsuarios = async () => {
-    setLoading(true)
-    try {
-      const res = await getUsuarios({ estado: filtroEstado, search })
-      setUsuarios(res.data.usuarios)
-    } catch { console.error('Error al cargar usuarios') }
-    finally   { setLoading(false) }
-  }
-
+  setLoading(true)
+  try {
+    const res = await getUsuarios({ estado: filtroEstado, search })
+    setUsuarios(res.data.usuarios)
+    const todos = await getUsuarios({})
+    setTodosUsuarios(todos.data.usuarios)
+  } catch { console.error('Error al cargar usuarios') }
+  finally { setLoading(false) }
+}
   useEffect(() => { fetchUsuarios() }, [filtroEstado, search])
 
   const handleAprobar = (id, nombre) => { setRolModal({ id, nombre }); setRolSel('cliente') }
@@ -130,9 +131,9 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
   }
 
   // Stats
-  const pendientes = usuarios.filter(u => u.estado === 'pendiente').length
-  const aprobados  = usuarios.filter(u => u.estado === 'aprobado').length
-  const rechazados = usuarios.filter(u => u.estado === 'rechazado').length
+  const pendientes = todosUsuarios.filter(u => u.estado === 'pendiente').length
+  const aprobados  = todosUsuarios.filter(u => u.estado === 'aprobado').length
+  const rechazados = todosUsuarios.filter(u => u.estado === 'rechazado').length
 
   const FILTROS = [
     { val:'pendiente', label:'Pendientes' },
