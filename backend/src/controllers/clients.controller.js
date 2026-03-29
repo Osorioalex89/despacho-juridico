@@ -1,4 +1,6 @@
+import bcrypt from 'bcryptjs'
 import Client from '../models/Client.js'
+import User   from '../models/User.js'
 import { Op } from 'sequelize'
 
 // GET /api/clientes
@@ -48,12 +50,29 @@ export const getClienteById = async (req, res) => {
 // POST /api/clientes
 export const createCliente = async (req, res) => {
   try {
-    const { nombre, telefono, correo, direccion, rfc, notas } = req.body
+    const { nombre, telefono, correo, direccion, rfc, notas, contrasena } = req.body
 
     if (!nombre) return res.status(400).json({ message: 'El nombre es requerido' })
 
+    let id_usuario = null
+
+    // Si se proporciona contraseña, crear usuario vinculado con acceso al portal
+    if (contrasena) {
+      if (!correo) return res.status(400).json({ message: 'El correo es requerido para crear acceso al portal' })
+
+      const existente = await User.findOne({ where: { correo } })
+      if (existente) return res.status(400).json({ message: 'Ya existe un usuario con ese correo' })
+
+      const hash    = await bcrypt.hash(contrasena, 10)
+      const usuario = await User.create({
+        nombre, correo, contrasena: hash,
+        rol: 'cliente', estado: 'aprobado',
+      })
+      id_usuario = usuario.id_usuario
+    }
+
     const cliente = await Client.create({
-      nombre, telefono, correo, direccion, rfc, notas
+      nombre, telefono, correo, direccion, rfc, notas, id_usuario
     })
 
     res.status(201).json({ message: 'Cliente creado exitosamente', cliente })
