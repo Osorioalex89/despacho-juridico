@@ -9,6 +9,9 @@ const transporter = nodemailer.createTransport({
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_PASS,
   },
+  connectionTimeout: 10000,  // 10 s — si Gmail no responde, falla rápido
+  greetingTimeout:   10000,
+  socketTimeout:     15000,
 })
 
 // ── Plantilla base Legal Premium (Navy/Gold) ───────────────────────
