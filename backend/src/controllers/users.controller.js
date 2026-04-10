@@ -21,7 +21,7 @@ export const getUsuarios = async (req, res) => {
     })
     res.json({ usuarios })
   } catch (error) {
-    console.error(error)
+    console.error('Error al obtener usuarios:', error.message)
     res.status(500).json({ message: 'Error interno del servidor' })
   }
 }
@@ -61,7 +61,7 @@ export const updateEstadoUsuario = async (req, res) => {
 
     res.json({ message: `Usuario ${estado} correctamente`, usuario })
   } catch (error) {
-    console.error(error)
+    console.error('Error al actualizar estado de usuario:', error.message)
     res.status(500).json({ message: 'Error interno del servidor' })
   }
 }
@@ -71,9 +71,15 @@ export const deleteUsuario = async (req, res) => {
   try {
     const usuario = await User.findByPk(req.params.id)
     if (!usuario) return res.status(404).json({ message: 'Usuario no encontrado' })
+
+    // Eliminar también el registro de clientes vinculado (si existe)
+    const Client = (await import('../models/Client.js')).default
+    await Client.destroy({ where: { id_usuario: usuario.id_usuario } })
+
     await usuario.destroy()
     res.json({ message: 'Usuario eliminado correctamente' })
   } catch (error) {
+    console.error('Error al eliminar usuario:', error.message)
     res.status(500).json({ message: 'Error interno del servidor' })
   }
 }

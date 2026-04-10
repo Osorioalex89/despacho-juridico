@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getClientes, deleteCliente } from './clientsService'
 import PageHeader from '../../components/layout/PageHeader'
+import { useToast, Toast } from '../../components/ui/Toast'
 import {
   Search, Plus, Eye, Pencil,
   Trash2, Users, Phone, Mail,
@@ -42,6 +43,7 @@ const ClientAvatar = ({ nombre, size = 36 }) => {
 }
 
 export default function ClientsPage() {
+  const { toast, showToast } = useToast()
   const { canManageClients } = useAuth()
   const navigate = useNavigate()
 
@@ -81,13 +83,16 @@ export default function ClientsPage() {
       await deleteCliente(deleteId)
       setDeleteId(null)
       fetchClientes()
+      // Notificar a otras secciones (ej. Usuarios) para que re-carguen su estado
+      window.dispatchEvent(new CustomEvent('refresh-usuarios'))
     } catch {
-      alert('Error al eliminar el cliente')
+      showToast('Error al eliminar el cliente')
     }
   }
 
   return (
     <>
+      <Toast toast={toast} />
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
       <style>{`
         @keyframes fadeUp {

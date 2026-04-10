@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../../context/AuthContext'
 import api from '../../services/axios.config'
 
 // ── Logo SVG premium — Monograma SC + Balanza ─────────────────────
@@ -81,7 +80,6 @@ const LogoSC = ({ size = 72 }) => (
 )
 
 export default function LoginPage() {
-  const { login }   = useAuth()
   const navigate    = useNavigate()
 
   const [correo,     setCorreo]     = useState('')
@@ -89,33 +87,26 @@ export default function LoginPage() {
   const [error,      setError]      = useState('')
   const [loading,    setLoading]    = useState(false)
 
-  // ── Lógica original intacta ───────────────────────────────────
+  // ── Paso 1: valida credenciales → redirige a OTP ─────────────
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setLoading(true)
     try {
       const res = await api.post('/auth/login', { correo, contrasena })
-      const { token, user } = res.data
-      login(user, token)
+      const { requiresOtp, tempToken, maskedEmail } = res.data
 
-if (user.estado === 'pendiente') {
-  navigate('/pendiente')
-  return
-}
-
-
-login(user, token)
-
-      const destinations = {
-        abogado:    '/panel/dashboard',
-        secretario: '/panel/dashboard',
-        cliente:    '/cliente/mis-citas',
+      if (requiresOtp) {
+        navigate('/verificar-otp', { state: { tempToken, maskedEmail } })
+        return
       }
-      navigate(destinations[user.rol] ?? '/login')
     } catch (err) {
-      const msg = err.response?.data?.message
-      if (msg === 'Credenciales incorrectas') {
+      const msg  = err.response?.data?.message
+      const code = err.response?.data?.code
+
+      if (code === 'EMAIL_NOT_VERIFIED') {
+        setError('Debes verificar tu correo antes de ingresar. Revisa tu bandeja de entrada.')
+      } else if (msg === 'Credenciales incorrectas') {
         setError('El correo o la contraseña son incorrectos. Verifica tus datos.')
       } else if (err.response?.status === 403) {
         setError('Tu cuenta está desactivada. Contacta al despacho.')
@@ -200,7 +191,7 @@ login(user, token)
 
         .lg-divider {
           display: flex; align-items: center; gap: 12px;
-          margin: 22px 0;
+          margin: 13px 0;
         }
         .lg-divider::before,
         .lg-divider::after {
@@ -275,7 +266,7 @@ login(user, token)
             border: '1px solid rgba(201,168,76,0.22)',
             borderRadius: '24px',
             boxShadow: '0 25px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(201,168,76,0.08)',
-            padding: '44px 48px',
+            padding: '28px 40px',
             overflow: 'hidden',
           }}
         >
@@ -286,9 +277,9 @@ login(user, token)
           }}/>
 
           {/* ── Logo + Nombre ─────────────────────────────── */}
-          <div style={{ textAlign:'center', marginBottom:'36px' }}>
-            <div style={{ display:'inline-block', marginBottom:'16px' }}>
-              <LogoSC size={68}/>
+          <div style={{ textAlign:'center', marginBottom:'20px' }}>
+            <div style={{ display:'inline-block', marginBottom:'10px' }}>
+              <LogoSC size={60}/>
             </div>
             <h1 style={{
               fontFamily:"'Playfair Display',Georgia,serif",
@@ -306,7 +297,7 @@ login(user, token)
               fontSize:'10px', fontWeight:'700',
               color:'rgba(201,168,76,0.6)',
               letterSpacing:'3px', textTransform:'uppercase',
-              margin:'0 0 14px',
+              margin:'0 0 8px',
             }}>
               Asesoría Jurídica Profesional
             </p>
@@ -319,11 +310,11 @@ login(user, token)
           </div>
 
           {/* ── Eyebrow ───────────────────────────────────── */}
-          <div style={{ marginBottom:'24px' }}>
+          <div style={{ marginBottom:'14px' }}>
             <p style={{
               fontFamily:"'Playfair Display',serif",
               fontSize:'20px', fontWeight:'700',
-              color:'rgba(255,255,255,0.95)', margin:'0 0 5px',
+              color:'rgba(255,255,255,0.95)', margin:'0 0 3px',
               textShadow:'0 1px 4px rgba(0,0,0,0.3)',
             }}>
               Iniciar sesión
@@ -358,14 +349,14 @@ login(user, token)
           {/* ── Formulario ────────────────────────────────── */}
           <form onSubmit={handleSubmit}>
             {/* Correo */}
-            <div style={{ marginBottom:'16px' }}>
+            <div style={{ marginBottom:'10px' }}>
               <label style={{
                 display:'block',
                 fontFamily:"'Inter',sans-serif",
                 fontSize:'11px', fontWeight:'700',
                 letterSpacing:'1.8px', textTransform:'uppercase',
                 color:'rgba(255,255,255,0.5)',
-                marginBottom:'7px',
+                marginBottom:'4px',
               }}>
                 Correo electrónico
               </label>
@@ -380,14 +371,14 @@ login(user, token)
             </div>
 
             {/* Contraseña */}
-            <div style={{ marginBottom:'28px' }}>
+            <div style={{ marginBottom:'10px' }}>
               <label style={{
                 display:'block',
                 fontFamily:"'Inter',sans-serif",
                 fontSize:'11px', fontWeight:'700',
                 letterSpacing:'1.8px', textTransform:'uppercase',
                 color:'rgba(255,255,255,0.5)',
-                marginBottom:'7px',
+                marginBottom:'4px',
               }}>
                 Contraseña
               </label>
@@ -399,6 +390,25 @@ login(user, token)
                 placeholder="••••••••"
                 required
               />
+            </div>
+
+            {/* Link olvide contraseña */}
+            <div style={{ textAlign:'right', marginBottom:'14px' }}>
+              <a
+                href="/olvide-contrasena"
+                translate="no"
+                style={{
+                  fontFamily:"'Inter',sans-serif",
+                  fontSize:'12px',
+                  color:'rgba(201,168,76,0.75)',
+                  textDecoration:'none',
+                  transition:'color 0.15s ease',
+                }}
+                onMouseEnter={e => e.target.style.color='#E8C97A'}
+                onMouseLeave={e => e.target.style.color='rgba(201,168,76,0.75)'}
+              >
+                ¿Olvidaste tu contraseña?
+              </a>
             </div>
 
             <button
@@ -426,7 +436,7 @@ login(user, token)
 
           {/* ── Contacto ──────────────────────────────────── */}
           <div style={{
-            marginTop:'28px', padding:'14px 16px',
+            marginTop:'16px', padding:'11px 14px',
             background:'rgba(255,255,255,0.03)',
             border:'1px solid rgba(255,255,255,0.07)',
             borderRadius:'10px',
@@ -458,7 +468,7 @@ login(user, token)
 
           {/* Footer dentro de card */}
           <p style={{
-            textAlign:'center', marginTop:'20px',
+            textAlign:'center', marginTop:'12px',
             fontFamily:"'Inter',sans-serif", fontSize:'10px',
             color:'rgba(255,255,255,0.2)',
             letterSpacing:'0.5px',

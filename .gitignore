@@ -3,7 +3,21 @@ node_modules/
 
 # Ignorar archivos de configuración local y secretos (Seguridad RNF01)
 .env
+.env.local
+.env.production
+.env*.local
 
 # Ignorar carpetas de distribución/compilación
 dist/
 build/
+
+# Archivos de herramientas de desarrollo (Claude Code)
+.claude/settings.local.json
+.claude/memory.db
+.claude-flow/
+.swarm/
+.mcp.json
+
+# Archivos accidentales
+u.estado
+memory.md

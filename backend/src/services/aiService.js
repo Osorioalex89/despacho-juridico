@@ -1,0 +1,182 @@
+import Anthropic from '@anthropic-ai/sdk'
+import fs        from 'fs'
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+
+/**
+ * Analiza un documento legal con Claude Haiku.
+ * @returns {{ tipo, partes, fechasClave, puntosPrincipales, urgencia }}
+ */
+export const analizarDocumento = async ({ rutaArchivo, nombreArchivo, tipoArchivo }) => {
+  const content = []
+
+  if (tipoArchivo?.includes('pdf')) {
+    const data = fs.readFileSync(rutaArchivo).toString('base64')
+    content.push({
+      type: 'document',
+      source: { type: 'base64', media_type: 'application/pdf', data },
+    })
+  } else if (tipoArchivo?.startsWith('image/')) {
+    const data      = fs.readFileSync(rutaArchivo).toString('base64')
+    const mediaType = tipoArchivo.includes('png') ? 'image/png'
+                    : tipoArchivo.includes('gif') ? 'image/gif'
+                    : tipoArchivo.includes('webp') ? 'image/webp'
+                    : 'image/jpeg'
+    content.push({
+      type: 'image',
+      source: { type: 'base64', media_type: mediaType, data },
+    })
+  } else {
+    // Texto plano, Word, etc. — leer como texto (funciona para .txt; para .docx da texto parcial)
+    let texto = ''
+    try { texto = fs.readFileSync(rutaArchivo, 'utf-8').slice(0, 8000) } catch { /* binario — ignorar */ }
+    const cuerpo = texto
+      ? `Contenido del archivo "${nombreArchivo}":\n\n${texto}`
+      : `Archivo: "${nombreArchivo}" (tipo: ${tipoArchivo || 'desconocido'}). No se pudo leer el contenido binario; infiere del nombre.`
+    content.push({ type: 'text', text: cuerpo })
+  }
+
+  content.push({
+    type: 'text',
+    text: `Eres un asistente jurídico experto. Analiza el documento y responde ÚNICAMENTE con JSON válido (sin markdown ni explicaciones) con esta estructura:
+{
+  "tipo": "tipo de documento (ej: contrato, demanda, acuerdo, escritura, poder notarial, etc.)",
+  "partes": ["nombre o rol parte 1", "nombre o rol parte 2"],
+  "fechasClave": ["fecha 1", "fecha 2"],
+  "puntosPrincipales": ["punto 1", "punto 2", "punto 3"],
+  "urgencia": "baja|media|alta"
+}
+Reglas: máximo 3 fechas y 5 puntos principales. Si el documento no está en español, traduce el resumen. Determina urgencia: alta si hay plazos inmediatos o acciones legales urgentes, media si hay plazos futuros, baja si es informativo.`,
+  })
+
+  const response = await client.messages.create({
+    model:      'claude-haiku-4-5-20251001',
+    max_tokens: 700,
+    messages:   [{ role: 'user', content }],
+  })
+
+  const raw   = response.content[0]?.text ?? ''
+  const match = raw.match(/\{[\s\S]*\}/)
+  if (!match) throw new Error(`IA no devolvió JSON válido: ${raw.slice(0, 200)}`)
+  return JSON.parse(match[0])
+}
+
+/**
+ * Asistente de chat sobre un caso jurídico específico.
+ * @param {{ caso, movimientos, documentos, historial, pregunta }} params
+ *   historial: Array de { role:'user'|'assistant', content:string }
+ *   pregunta:  string — mensaje actual del usuario
+ * @returns {string} — respuesta en texto del asistente
+ */
+export const chatConCaso = async ({ caso, movimientos = [], documentos = [], historial = [], pregunta }) => {
+  const movText = movimientos.length
+    ? movimientos.map(m => `- [${m.tipo}] ${m.descripcion} (${m.fecha_movimiento})`).join('\n')
+    : 'Sin movimientos registrados.'
+
+  const docText = documentos.length
+    ? documentos.map(d => {
+        const ia = d.analisis ? (() => { try { return JSON.parse(d.analisis) } catch { return null } })() : null
+        return ia
+          ? `- "${d.nombre_original}" (${d.categoria}): ${ia.tipo}, urgencia=${ia.urgencia}`
+          : `- "${d.nombre_original}" (${d.categoria})`
+      }).join('\n')
+    : 'Sin documentos.'
+
+  const sistema = `Eres un asistente jurídico especializado en legislación mexicana, asignado al expediente siguiente. Responde en español, de forma clara y profesional. No inventes datos que no estén en el expediente.
+
+EXPEDIENTE:
+Folio: ${caso.folio}
+Asunto: ${caso.asunto}
+Tipo: ${caso.tipo}
+Estado: ${caso.estado}
+Fecha apertura: ${caso.fecha_apertura}
+Fecha límite: ${caso.fecha_limite || 'No definida'}
+
+MOVIMIENTOS:
+${movText}
+
+DOCUMENTOS:
+${docText}`
+
+  const messages = [
+    ...historial.map(h => ({ role: h.role, content: h.content })),
+    { role: 'user', content: pregunta },
+  ]
+
+  const response = await client.messages.create({
+    model:      'claude-haiku-4-5-20251001',
+    max_tokens: 800,
+    system:     sistema,
+    messages,
+  })
+
+  return response.content[0]?.text ?? 'Sin respuesta.'
+}
+
+/**
+ * Analiza el estado integral de un caso jurídico.
+ * @param {{ caso, movimientos, documentos, citas }} data
+ * @returns {{ riesgo, resumen, accionesRecomendadas, alertas, proximaAccion }}
+ */
+export const analizarCaso = async ({ caso, movimientos = [], documentos = [], citas = [] }) => {
+  const movText = movimientos.length
+    ? movimientos.map(m => `- [${m.tipo}] ${m.descripcion} (${m.fecha_movimiento})`).join('\n')
+    : 'Sin movimientos registrados.'
+
+  const docText = documentos.length
+    ? documentos.map(d => {
+        const ia = d.analisis ? (() => { try { return JSON.parse(d.analisis) } catch { return null } })() : null
+        return ia
+          ? `- "${d.nombre_original}" (${d.categoria}): tipo=${ia.tipo}, urgencia=${ia.urgencia}, puntos=${ia.puntosPrincipales?.slice(0,2).join('; ')}`
+          : `- "${d.nombre_original}" (${d.categoria}): sin análisis IA`
+      }).join('\n')
+    : 'Sin documentos.'
+
+  const citaText = citas.length
+    ? citas.map(c => `- ${c.fecha} ${c.hora ? c.hora.slice(0,5) : ''} — ${c.motivo} [${c.estado}]`).join('\n')
+    : 'Sin citas próximas.'
+
+  const prompt = `Eres un agente jurídico especializado en legislación mexicana.
+Analiza el siguiente expediente y responde ÚNICAMENTE con JSON válido (sin markdown):
+
+CASO:
+Folio: ${caso.folio}
+Asunto: ${caso.asunto}
+Tipo: ${caso.tipo}
+Estado: ${caso.estado}
+Fecha apertura: ${caso.fecha_apertura}
+Fecha límite: ${caso.fecha_limite || 'No definida'}
+Juzgado: ${caso.juzgado || 'No especificado'}
+Contraparte: ${caso.contraparte || 'No especificada'}
+
+MOVIMIENTOS RECIENTES:
+${movText}
+
+DOCUMENTOS:
+${docText}
+
+CITAS:
+${citaText}
+
+Responde con este JSON:
+{
+  "riesgo": "alto|medio|bajo",
+  "resumen": "Resumen ejecutivo del estado actual en 2-3 oraciones.",
+  "accionesRecomendadas": ["acción 1", "acción 2", "acción 3"],
+  "alertas": ["alerta urgente si la hay"],
+  "proximaAccion": "La acción más urgente e inmediata a tomar."
+}
+
+Reglas: máximo 4 acciones recomendadas, máximo 3 alertas (array vacío si no hay). Riesgo alto si hay plazos próximos, contraparte activa o documentos urgentes.`
+
+  const response = await client.messages.create({
+    model:      'claude-haiku-4-5-20251001',
+    max_tokens: 600,
+    messages:   [{ role: 'user', content: prompt }],
+  })
+
+  const raw   = response.content[0]?.text ?? ''
+  const match = raw.match(/\{[\s\S]*\}/)
+  if (!match) throw new Error(`IA no devolvió JSON válido: ${raw.slice(0, 200)}`)
+  return JSON.parse(match[0])
+}

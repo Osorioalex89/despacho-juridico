@@ -14,5 +14,8 @@ export const uploadDocumento  = (id_caso, archivo, categoria, descripcion) => {
     headers: { 'Content-Type': 'multipart/form-data' }
   })
 }
-export const getMisDocumentos = (id_caso) =>
+export const getMisDocumentos    = (id_caso) =>
   api.get('/documentos/mis-documentos', { params: id_caso ? { id_caso } : {} })
+
+export const analizarDocumentoIA = (id) => api.post(`/documentos/${id}/analizar`)
+export const toggleBloqueoDoc    = (id) => api.patch(`/documentos/${id}/toggle-bloqueo`)

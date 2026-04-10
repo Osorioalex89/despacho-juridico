@@ -38,13 +38,16 @@ function Badge({ estado }) {
   )
 }
 
+const toLocalStr = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+
 export default function MisCitasPage() {
   const navigate = useNavigate()
   const hoy      = new Date()
 
   const [año,        setAño]        = useState(hoy.getFullYear())
   const [mes,        setMes]        = useState(hoy.getMonth())
-  const [diaSelecto, setDiaSelecto] = useState(hoy.toISOString().split('T')[0])
+  const [diaSelecto, setDiaSelecto] = useState(toLocalStr(hoy))
   const [citas,      setCitas]      = useState([])
   const [loading,    setLoading]    = useState(true)
   const [panelKey,   setPanelKey]   = useState(0)
@@ -133,6 +136,19 @@ export default function MisCitasPage() {
           cursor:pointer; transition:all 0.15s ease;
         }
         .mc-btn-primary:hover { background:linear-gradient(135deg,#E8C97A 0%,#C9A84C 100%); transform:translateY(-1px); box-shadow:0 4px 14px rgba(201,168,76,0.3); }
+
+        /* Layout responsive */
+        .mc-layout  { flex:1; display:flex; overflow:hidden; }
+        .mc-cal     { width:280px; flex-shrink:0; background:rgba(4,12,32,0.85); backdrop-filter:blur(20px); border-right:1px solid rgba(201,168,76,0.12); display:flex; flex-direction:column; overflow-y:auto; }
+        .mc-detail  { flex:1; overflow-y:auto; padding:22px 26px; }
+        .mc-hdr     { padding:22px 32px 18px; }
+
+        @media (max-width: 700px) {
+          .mc-layout  { flex-direction:column; overflow:auto; }
+          .mc-cal     { width:100%; border-right:none; border-bottom:1px solid rgba(201,168,76,0.12); }
+          .mc-detail  { padding:14px 14px 24px; }
+          .mc-hdr     { padding:16px 16px 14px; }
+        }
       `}</style>
 
       <div style={{
@@ -145,10 +161,10 @@ export default function MisCitasPage() {
       }}>
 
         {/* ── Page header ──────────────────────────────────────── */}
-        <div className="mc-fade" style={{
+        <div className="mc-fade mc-hdr" style={{
           background:'linear-gradient(135deg,rgba(6,16,40,0.97) 0%,rgba(12,26,56,0.9) 100%)',
           borderBottom:'1px solid rgba(201,168,76,0.14)',
-          padding:'22px 32px 18px', position:'relative', overflow:'hidden', flexShrink:0,
+          position:'relative', overflow:'hidden', flexShrink:0,
         }}>
           {[160,110].map((s,i)=>(
             <div key={i} style={{position:'absolute',top:-s*0.4,right:-s*0.4,width:s,height:s,borderRadius:'50%',border:`1px solid rgba(201,168,76,${0.06-i*0.02})`,pointerEvents:'none'}}/>
@@ -169,20 +185,15 @@ export default function MisCitasPage() {
         </div>
 
         {/* ── Split layout ──────────────────────────────────────── */}
-        <div style={{flex:1,display:'flex',overflow:'hidden'}}>
+        <div className="mc-layout">
 
-          {/* Izquierda — Calendario */}
-          <div style={{
-            width:'280px', flexShrink:0,
-            background:'rgba(4,12,32,0.85)', backdropFilter:'blur(20px)',
-            borderRight:'1px solid rgba(201,168,76,0.12)',
-            display:'flex', flexDirection:'column', overflowY:'auto',
-          }}>
+          {/* Izquierda/Arriba — Calendario */}
+          <div className="mc-cal">
             {/* Nav mes */}
             <div style={{padding:'16px 16px 10px',borderBottom:'1px solid rgba(255,255,255,0.05)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <button className="mc-nav" onClick={()=>navMes(-1)}>‹</button>
               <div style={{textAlign:'center'}}>
-                <p style={{fontFamily:"'Playfair Display',serif",fontSize:'15px',fontWeight:'700',color:'rgba(255,255,255,0.92)',margin:'0 0 1px'}}>{MESES[mes]}</p>
+                <p style={{fontFamily:"'Playfair Display',serif",fontSize:'15px',fontWeight:'700',color:'rgba(255,255,255,0.92)',margin:'0 0 1px'}} translate="no">{MESES[mes]}</p>
                 <p style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',fontWeight:'500',color:'rgba(201,168,76,0.6)',margin:0}}>{año}</p>
               </div>
               <button className="mc-nav" onClick={()=>navMes(1)}>›</button>
@@ -240,18 +251,18 @@ export default function MisCitasPage() {
             </div>
           </div>
 
-          {/* Derecha — detalle del día */}
-          <div style={{flex:1,overflowY:'auto',padding:'22px 26px'}}>
+          {/* Derecha/Abajo — detalle del día */}
+          <div className="mc-detail">
             <div key={panelKey} className="mc-panel">
 
               {/* Encabezado del día */}
               <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',marginBottom:'20px',flexWrap:'wrap',gap:'10px'}}>
                 <div>
                   <div style={{display:'flex',alignItems:'baseline',gap:'10px',flexWrap:'wrap'}}>
-                    <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'22px',fontWeight:'700',color:'rgba(255,255,255,0.95)',margin:0,textShadow:'0 2px 5px rgba(0,0,0,0.3)'}}>
+                    <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'22px',fontWeight:'700',color:'rgba(255,255,255,0.95)',margin:0,textShadow:'0 2px 5px rgba(0,0,0,0.3)'}} translate="no">
                       {nombreDia}, {numDia} de {nombreMes}
                     </h2>
-                    {diaSelecto===hoy.toISOString().split('T')[0] && (
+                    {diaSelecto===toLocalStr(hoy) && (
                       <span style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'2px',textTransform:'uppercase',background:'rgba(201,168,76,0.14)',border:'1px solid rgba(201,168,76,0.28)',color:'rgba(201,168,76,0.9)',padding:'3px 9px',borderRadius:'20px'}}>Hoy</span>
                     )}
                   </div>
@@ -259,9 +270,6 @@ export default function MisCitasPage() {
                     {citasDelDia.length===0 ? 'Sin citas programadas' : `${citasDelDia.length} cita${citasDelDia.length!==1?'s':''} programada${citasDelDia.length!==1?'s':''}`}
                   </p>
                 </div>
-                <button className="mc-btn-primary" onClick={()=>navigate('/cliente/solicitar-cita')}>
-                  <Plus size={13}/> Agendar
-                </button>
               </div>
 
               {loading ? (
@@ -276,12 +284,9 @@ export default function MisCitasPage() {
                     <Clock size={22} style={{color:'rgba(201,168,76,0.45)'}}/>
                   </div>
                   <p style={{fontFamily:"'Playfair Display',serif",fontSize:'15px',fontWeight:'700',color:'rgba(255,255,255,0.6)',margin:'0 0 7px'}}>Sin citas para este día</p>
-                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.3)',margin:'0 0 18px',maxWidth:'220px',lineHeight:1.6}}>
-                    Puedes solicitar una nueva cita con el despacho
+                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.3)',margin:0,maxWidth:'220px',lineHeight:1.6}}>
+                    Puedes solicitar una nueva cita con el despacho desde el botón en la parte superior.
                   </p>
-                  <button className="mc-btn-primary" onClick={()=>navigate('/cliente/solicitar-cita')}>
-                    <Plus size={12}/> Solicitar cita
-                  </button>
                 </div>
               ) : (
                 <div style={{display:'flex',flexDirection:'column',gap:'10px'}}>

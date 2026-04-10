@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { getUsuarios, updateEstadoUsuario, deleteUsuario } from './usersService'
+import { getUsuarios, updateEstadoUsuario, deleteUsuario, adminResetPassword } from './usersService'
+import { useToast, Toast } from '../../components/ui/Toast'
 import {
   CheckCircle, XCircle, Trash2, Search,
   UserCheck, Clock, Users, ShieldCheck,
-  Shield, AlertTriangle, X
+  Shield, AlertTriangle, X, KeyRound
 } from 'lucide-react'
 
 // ── Avatar con inicial ────────────────────────────────────────────
@@ -86,6 +87,7 @@ const IconUsers = () => (
 )
 
 export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) {
+  const { toast, showToast } = useToast()
   const { canManageUsers } = useAuth()
   const [usuarios, setUsuarios] = useState([])
   const [todosUsuarios, setTodosUsuarios] = useState([])
@@ -95,21 +97,33 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
   const [rolModal,     setRolModal]     = useState(null)
   const [rolSel,       setRolSel]       = useState('cliente')
   const [deleteModal,  setDeleteModal]  = useState(null)
+  const [resetModal,   setResetModal]   = useState(null)   // { id_usuario, nombre, correo }
+  const [nuevaPass,    setNuevaPass]    = useState('')
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetError,   setResetError]   = useState('')
+  const [resetOk,      setResetOk]      = useState(false)
 
   // Sync defaultEstado cuando cambia la ruta
   useEffect(() => { setFiltroEstado(defaultEstado) }, [defaultEstado])
 
   const fetchUsuarios = async () => {
-  setLoading(true)
-  try {
-    const res = await getUsuarios({ estado: filtroEstado, search })
-    setUsuarios(res.data.usuarios)
-    const todos = await getUsuarios({})
-    setTodosUsuarios(todos.data.usuarios)
-  } catch { console.error('Error al cargar usuarios') }
-  finally { setLoading(false) }
-}
+    setLoading(true)
+    try {
+      const res = await getUsuarios({ estado: filtroEstado, search })
+      setUsuarios(res.data.usuarios)
+      const todos = await getUsuarios({})
+      setTodosUsuarios(todos.data.usuarios)
+    } catch { console.error('Error al cargar usuarios') }
+    finally { setLoading(false) }
+  }
   useEffect(() => { fetchUsuarios() }, [filtroEstado, search])
+
+  // Escuchar eliminaciones desde otras secciones (ej. Clientes)
+  useEffect(() => {
+    const handler = () => fetchUsuarios()
+    window.addEventListener('refresh-usuarios', handler)
+    return () => window.removeEventListener('refresh-usuarios', handler)
+  }, [filtroEstado, search])
 
   const handleAprobar = (id, nombre) => { setRolModal({ id, nombre }); setRolSel('cliente') }
 
@@ -117,23 +131,49 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
     try {
       await updateEstadoUsuario(rolModal.id, { estado:'aprobado', rol:rolSel })
       setRolModal(null); fetchUsuarios()
-    } catch { alert('Error al aprobar') }
+    } catch { showToast('Error al aprobar') }
   }
 
   const handleRechazar = async (id) => {
     try { await updateEstadoUsuario(id, { estado:'rechazado' }); fetchUsuarios() }
-    catch { alert('Error al rechazar') }
+    catch { showToast('Error al rechazar') }
   }
 
   const handleEliminar = async () => {
     try { await deleteUsuario(deleteModal.id); setDeleteModal(null); fetchUsuarios() }
-    catch { alert('Error al eliminar') }
+    catch { showToast('Error al eliminar') }
+  }
+
+  const abrirResetModal = (u) => {
+    setResetModal({ id_usuario: u.id_usuario, nombre: u.nombre, correo: u.correo })
+    setNuevaPass('')
+    setResetError('')
+    setResetOk(false)
+  }
+
+  const confirmarReset = async () => {
+    if (!nuevaPass || nuevaPass.length < 6) {
+      setResetError('La contraseña debe tener al menos 6 caracteres.')
+      return
+    }
+    setResetLoading(true)
+    setResetError('')
+    try {
+      await adminResetPassword({ id_usuario: resetModal.id_usuario, nueva_contrasena: nuevaPass })
+      setResetOk(true)
+      fetchUsuarios()
+    } catch (err) {
+      setResetError(err.response?.data?.message ?? 'Error al restablecer contraseña.')
+    } finally {
+      setResetLoading(false)
+    }
   }
 
   // Stats
-  const pendientes = todosUsuarios.filter(u => u.estado === 'pendiente').length
-  const aprobados  = todosUsuarios.filter(u => u.estado === 'aprobado').length
-  const rechazados = todosUsuarios.filter(u => u.estado === 'rechazado').length
+  const pendientes      = todosUsuarios.filter(u => u.estado === 'pendiente').length
+  const aprobados       = todosUsuarios.filter(u => u.estado === 'aprobado').length
+  const rechazados      = todosUsuarios.filter(u => u.estado === 'rechazado').length
+  const resetPendientes = todosUsuarios.filter(u => u.reset_solicitado).length
 
   const FILTROS = [
     { val:'pendiente', label:'Pendientes' },
@@ -144,6 +184,7 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
 
   return (
     <>
+      <Toast toast={toast} />
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
       <style>{`
         @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
@@ -203,6 +244,29 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
         }
         .up-action-del:hover { background:rgba(239,68,68,0.12); border-color:rgba(239,68,68,0.28); color:#FCA5A5; }
 
+        .up-action-reset {
+          display:inline-flex; align-items:center; gap:6px;
+          padding:6px 12px; border-radius:7px;
+          background:rgba(201,168,76,0.08); border:1px solid rgba(201,168,76,0.22);
+          color:#E8C97A; font-family:'Inter',sans-serif; font-size:11px; font-weight:600;
+          cursor:pointer; transition:all 0.15s ease; white-space:nowrap;
+        }
+        .up-action-reset:hover { background:rgba(201,168,76,0.16); border-color:rgba(201,168,76,0.38); transform:translateY(-1px); }
+
+        .up-pass-input {
+          width:100%; padding:11px 14px;
+          border-radius:9px;
+          border:1px solid rgba(255,255,255,0.12);
+          background:rgba(255,255,255,0.05);
+          color:rgba(255,255,255,0.9);
+          font-family:'Inter',sans-serif; font-size:14px;
+          outline:none; box-sizing:border-box;
+          transition:all 0.15s ease;
+          colorScheme: dark;
+        }
+        .up-pass-input::placeholder { color:rgba(255,255,255,0.2); }
+        .up-pass-input:focus { border-color:rgba(201,168,76,0.5); background:rgba(201,168,76,0.04); box-shadow:0 0 0 3px rgba(201,168,76,0.1); }
+
         .up-modal-bg {
           position:fixed; inset:0; z-index:9999;
           display:flex; align-items:center; justify-content:center;
@@ -258,11 +322,12 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
         <div style={{padding:'26px 36px',maxWidth:'1300px'}}>
 
           {/* ── Stat cards ──────────────────────────────────────── */}
-          <div className="up-fade" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'14px',marginBottom:'22px',animationDelay:'0.06s'}}>
+          <div className="up-fade" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'14px',marginBottom:'22px',animationDelay:'0.06s'}}>
             {[
-              { label:'Pendientes de aprobación', val:pendientes, color:'#F59E0B', colorT:'#FCD34D', bg:'rgba(245,158,11,0.08)', border:'rgba(245,158,11,0.2)', icon:Clock     },
-              { label:'Usuarios aprobados',        val:aprobados,  color:'#22C55E', colorT:'#86EFAC', bg:'rgba(34,197,94,0.08)',  border:'rgba(34,197,94,0.2)',  icon:ShieldCheck},
-              { label:'Usuarios rechazados',       val:rechazados, color:'#EF4444', colorT:'#FCA5A5', bg:'rgba(239,68,68,0.08)',  border:'rgba(239,68,68,0.18)', icon:XCircle   },
+              { label:'Pendientes de aprobacion', val:pendientes,      color:'#F59E0B', colorT:'#FCD34D', bg:'rgba(245,158,11,0.08)', border:'rgba(245,158,11,0.2)',  icon:Clock     },
+              { label:'Usuarios aprobados',        val:aprobados,       color:'#22C55E', colorT:'#86EFAC', bg:'rgba(34,197,94,0.08)',  border:'rgba(34,197,94,0.2)',   icon:ShieldCheck},
+              { label:'Usuarios rechazados',       val:rechazados,      color:'#EF4444', colorT:'#FCA5A5', bg:'rgba(239,68,68,0.08)',  border:'rgba(239,68,68,0.18)',  icon:XCircle   },
+              { label:'Resets pendientes',          val:resetPendientes, color:'#C9A84C', colorT:'#E8C97A', bg:'rgba(201,168,76,0.08)', border:'rgba(201,168,76,0.2)',  icon:KeyRound  },
             ].map((s,i)=>(
               <div key={s.label} className="up-fade" style={{
                 background:s.bg, backdropFilter:'blur(16px)',
@@ -384,7 +449,7 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
                   </p>
 
                   {/* Acciones */}
-                  <div style={{display:'flex',alignItems:'center',gap:'6px'}} onClick={e=>e.stopPropagation()}>
+                  <div style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap'}} onClick={e=>e.stopPropagation()}>
                     {u.estado === 'pendiente' && (
                       <>
                         <button className="up-action-approve" onClick={()=>handleAprobar(u.id_usuario,u.nombre)}>
@@ -395,6 +460,14 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
                         </button>
                       </>
                     )}
+                    {u.reset_solicitado && (
+                      <button className="up-action-reset" onClick={()=>abrirResetModal(u)} title="Solicito restablecer contrasena">
+                        <KeyRound size={12}/> Restablecer
+                      </button>
+                    )}
+                    <button className="up-action-del" onClick={()=>setDeleteModal({id:u.id_usuario,nombre:u.nombre})}>
+                      <Trash2 size={13}/>
+                    </button>
                   </div>
                 </div>
               ))
@@ -493,6 +566,118 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
                 Sí, eliminar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal restablecimiento de contraseña ─────────────── */}
+      {resetModal && (
+        <div className="up-modal-bg" onClick={()=>{ if(!resetLoading) setResetModal(null) }}>
+          <div onClick={e=>e.stopPropagation()} style={{
+            position:'relative',zIndex:1,width:'100%',maxWidth:'440px',
+            background:'rgba(6,16,40,0.97)',backdropFilter:'blur(24px)',
+            border:'1px solid rgba(201,168,76,0.25)',borderRadius:'22px',
+            boxShadow:'0 25px 80px rgba(0,0,0,0.7)',padding:'28px 32px',
+          }}>
+
+            {/* Header */}
+            <div style={{display:'flex',alignItems:'center',gap:'14px',marginBottom:'22px'}}>
+              <div style={{width:'46px',height:'46px',borderRadius:'12px',background:'rgba(201,168,76,0.1)',border:'1px solid rgba(201,168,76,0.25)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                <KeyRound size={20} style={{color:'#E8C97A'}}/>
+              </div>
+              <div>
+                <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:'18px',fontWeight:'700',color:'rgba(255,255,255,0.95)',margin:'0 0 3px'}}>
+                  Restablecer contraseña
+                </h2>
+                <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.4)',margin:0}}>
+                  {resetModal.nombre} &nbsp;·&nbsp; {resetModal.correo}
+                </p>
+              </div>
+            </div>
+
+            {resetOk ? (
+              /* Estado exitoso */
+              <div>
+                <div style={{
+                  background:'rgba(34,197,94,0.1)',border:'1px solid rgba(34,197,94,0.25)',
+                  borderRadius:'12px',padding:'20px',textAlign:'center',marginBottom:'20px',
+                }}>
+                  <p style={{fontFamily:"'Playfair Display',serif",fontSize:'15px',fontWeight:'700',color:'rgba(255,255,255,0.9)',margin:'0 0 6px'}}>
+                    Contraseña restablecida
+                  </p>
+                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.4)',margin:0,lineHeight:1.6}}>
+                    Se envio la nueva contraseña al correo del usuario.
+                  </p>
+                </div>
+                <button onClick={()=>setResetModal(null)} style={{width:'100%',padding:'11px',borderRadius:'9px',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',color:'rgba(255,255,255,0.75)',fontFamily:"'Inter',sans-serif",fontSize:'13px',fontWeight:'500',cursor:'pointer'}}>
+                  Cerrar
+                </button>
+              </div>
+            ) : (
+              /* Formulario */
+              <div>
+                {/* Badge solicitud */}
+                <div style={{
+                  display:'inline-flex',alignItems:'center',gap:'6px',
+                  background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.25)',
+                  borderRadius:'6px',padding:'5px 10px',marginBottom:'18px',
+                }}>
+                  <span style={{width:'5px',height:'5px',borderRadius:'50%',background:'#F59E0B',flexShrink:0}}/>
+                  <span style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',fontWeight:'600',color:'#FCD34D'}}>
+                    Solicitud de restablecimiento pendiente
+                  </span>
+                </div>
+
+                {/* Campo contraseña */}
+                <div style={{marginBottom:'16px'}}>
+                  <label style={{display:'block',fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'1.8px',textTransform:'uppercase',color:'rgba(255,255,255,0.45)',marginBottom:'7px'}}>
+                    Nueva contraseña temporal
+                  </label>
+                  <input
+                    className="up-pass-input"
+                    type="text"
+                    value={nuevaPass}
+                    onChange={e=>{ setNuevaPass(e.target.value); setResetError('') }}
+                    placeholder="Minimo 6 caracteres"
+                    autoComplete="off"
+                  />
+                </div>
+
+                {/* Error */}
+                {resetError && (
+                  <div style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.25)',borderRadius:'8px',padding:'10px 13px',marginBottom:'16px'}}>
+                    <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'#FCA5A5',margin:0}}>
+                      {resetError}
+                    </p>
+                  </div>
+                )}
+
+                {/* Info */}
+                <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'9px',padding:'11px 14px',marginBottom:'22px'}}>
+                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:'11.5px',color:'rgba(255,255,255,0.35)',margin:0,lineHeight:1.6}}>
+                    La nueva contraseña se enviara al correo del usuario. Se recomienda que el usuario la cambie despues de ingresar.
+                  </p>
+                </div>
+
+                <div style={{display:'flex',gap:'10px',justifyContent:'flex-end'}}>
+                  <button
+                    onClick={()=>setResetModal(null)}
+                    disabled={resetLoading}
+                    style={{padding:'9px 18px',borderRadius:'8px',background:'rgba(255,255,255,0.05)',border:'1px solid rgba(255,255,255,0.12)',color:'rgba(255,255,255,0.65)',fontFamily:"'Inter',sans-serif",fontSize:'13px',fontWeight:'500',cursor:'pointer',opacity:resetLoading?0.5:1}}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmarReset}
+                    disabled={resetLoading || !nuevaPass}
+                    style={{padding:'9px 20px',borderRadius:'8px',background:'linear-gradient(135deg,#C9A84C,#9A7A32)',border:'none',color:'#020818',fontFamily:"'Inter',sans-serif",fontSize:'13px',fontWeight:'700',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:'7px',opacity:(resetLoading||!nuevaPass)?0.55:1}}
+                  >
+                    <KeyRound size={13}/>
+                    {resetLoading ? 'Guardando...' : 'Confirmar restablecimiento'}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

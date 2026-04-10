@@ -1,5 +1,6 @@
 import { DataTypes } from 'sequelize'
 import sequelize     from '../config/database.js'
+import Client        from './Client.js'
 
 const Appointment = sequelize.define('Cita', {
   id_cita: {
@@ -52,5 +53,7 @@ id_solicitante: {
   tableName:  'citas',
   timestamps: true,
 })
+
+Appointment.belongsTo(Client, { foreignKey: 'id_cliente', as: 'Cliente' })
 
 export default Appointment

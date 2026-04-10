@@ -24,6 +24,8 @@ const Document = sequelize.define('Documento', {
     defaultValue: 'general',
   },
   descripcion:   { type: DataTypes.STRING(255), allowNull: true },
+  analisis:      { type: DataTypes.TEXT,        allowNull: true },
+  bloqueado:     { type: DataTypes.BOOLEAN,     defaultValue: true },
 }, {
   tableName:  'documentos',
   timestamps: true,

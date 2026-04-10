@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
-import { getMisCasos }         from '../cases/casesService'
-import { getMisDocumentos }    from '../documents/documentsService'
+import { getMisCasos, getMovimientos, chatCaso } from '../cases/casesService'
+import { useToast, Toast } from '../../components/ui/Toast'
+import { getMisDocumentos }            from '../documents/documentsService'
 import {
   FolderOpen, Clock, CheckCircle, XCircle,
   AlertCircle, FileText, Calendar,
-  ChevronRight, ChevronDown, Download
+  ChevronRight, ChevronDown, ChevronUp, Download, Lock, Eye,
+  Bell, Gavel, Scale, Users, Sparkles, Send, Loader2, MessageSquare
 } from 'lucide-react'
 
 // ── Estado config premium ─────────────────────────────────────────
@@ -21,6 +23,34 @@ function formatFecha(fecha) {
   return new Date(fecha + 'T12:00:00').toLocaleDateString('es-MX', {
     day:'numeric', month:'long', year:'numeric'
   })
+}
+
+// ── Semáforo de estado ────────────────────────────────────────────
+function calcularSemaforo(caso, docs = []) {
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+
+  if (caso.estado === 'cerrado') return null
+
+  if (caso.estado === 'urgente') return 'rojo'
+
+  if (caso.fecha_limite) {
+    const limite = new Date(caso.fecha_limite + 'T12:00:00')
+    const diffDias = Math.ceil((limite - hoy) / (1000 * 60 * 60 * 24))
+    if (diffDias <= 3) return 'rojo'
+    if (diffDias <= 14) return 'amarillo'
+  }
+
+  const hayBloqueados = docs.some(d => d.bloqueado)
+  if (hayBloqueados) return 'amarillo'
+
+  return 'verde'
+}
+
+const SEMAFORO_CFG = {
+  rojo:     { color: '#EF4444', bg: 'rgba(239,68,68,0.15)',   border: 'rgba(239,68,68,0.35)',   label: 'Requiere atención urgente' },
+  amarillo: { color: '#F59E0B', bg: 'rgba(245,158,11,0.15)',  border: 'rgba(245,158,11,0.35)',  label: 'Atención recomendada' },
+  verde:    { color: '#22C55E', bg: 'rgba(34,197,94,0.15)',   border: 'rgba(34,197,94,0.35)',   label: 'Caso al día' },
 }
 
 function Badge({ estado }) {
@@ -41,6 +71,7 @@ function Badge({ estado }) {
 }
 
 export default function MisCasosPage() {
+  const { toast, showToast } = useToast()
   const [casos,        setCasos]        = useState([])
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState('')
@@ -48,6 +79,29 @@ export default function MisCasosPage() {
   const [casoExpandido,setCasoExpandido]= useState(null)
   const [docsPorCaso,  setDocsPorCaso]  = useState({})
   const [loadingDocs,  setLoadingDocs]  = useState(false)
+  const [movsPorCaso,  setMovsPorCaso]  = useState({})
+  const [expandedIA,   setExpandedIA]   = useState(null)
+  const [chatPorCaso,  setChatPorCaso]  = useState({}) // { [id_caso]: { open, history, input, loading } }
+  const [previewDoc,   setPreviewDoc]   = useState(null) // { id, nombre, tipo, blobUrl }
+
+  const getChatState = (id) => chatPorCaso[id] || { open:false, history:[], input:'', loading:false }
+  const setChatState = (id, patch) => setChatPorCaso(prev => ({
+    ...prev, [id]: { ...getChatState(id), ...patch }
+  }))
+
+  const sendClientChat = async (id_caso) => {
+    const cs = getChatState(id_caso)
+    if (!cs.input.trim() || cs.loading) return
+    const pregunta = cs.input.trim()
+    const newHistory = [...cs.history, { role:'user', content:pregunta }]
+    setChatState(id_caso, { input:'', history:newHistory, loading:true })
+    try {
+      const r = await chatCaso(id_caso, { pregunta, historial:cs.history })
+      setChatState(id_caso, { history:[...newHistory, { role:'assistant', content:r.data.respuesta }], loading:false })
+    } catch {
+      setChatState(id_caso, { history:[...newHistory, { role:'assistant', content:'Error al conectar con el asistente. Intenta de nuevo.' }], loading:false })
+    }
+  }
 
   useEffect(() => {
     getMisCasos()
@@ -64,31 +118,71 @@ export default function MisCasosPage() {
   const toggleCaso = async (id_caso) => {
     if (casoExpandido === id_caso) { setCasoExpandido(null); return }
     setCasoExpandido(id_caso)
-    if (docsPorCaso[id_caso]) return
-    setLoadingDocs(true)
+    const pending = []
+    if (!docsPorCaso[id_caso]) {
+      setLoadingDocs(true)
+      pending.push(
+        getMisDocumentos(id_caso)
+          .then(r => setDocsPorCaso(prev => ({ ...prev, [id_caso]: r.data.documentos })))
+          .catch(() => setDocsPorCaso(prev => ({ ...prev, [id_caso]: [] })))
+      )
+    }
+    if (!movsPorCaso[id_caso]) {
+      pending.push(
+        getMovimientos(id_caso)
+          .then(r => setMovsPorCaso(prev => ({ ...prev, [id_caso]: r.data.movimientos })))
+          .catch(() => setMovsPorCaso(prev => ({ ...prev, [id_caso]: [] })))
+      )
+    }
+    if (pending.length) await Promise.all(pending).finally(() => setLoadingDocs(false))
+  }
+
+  const handlePreview = async (doc) => {
     try {
-      const r = await getMisDocumentos(id_caso)
-      setDocsPorCaso(prev => ({ ...prev, [id_caso]: r.data.documentos }))
-    } catch {
-      setDocsPorCaso(prev => ({ ...prev, [id_caso]: [] }))
-    } finally { setLoadingDocs(false) }
+      const token = localStorage.getItem('token')
+      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+      const res = await fetch(`${apiBase}/documentos/mis-documentos/${doc.id_documento}/preview`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      if (res.status === 401) { window.location.href = '/login'; return }
+      if (res.status === 403) {
+        const data = await res.json()
+        showToast(data.message || 'Documento no disponible para vista previa', 'warn')
+        return
+      }
+      if (!res.ok) { showToast('Error al cargar la vista previa'); return }
+      const blob = await res.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      setPreviewDoc({ id: doc.id_documento, nombre: doc.nombre_original, tipo: doc.tipo, blobUrl })
+    } catch { showToast('Error de conexión al cargar vista previa') }
+  }
+
+  const closePreview = () => {
+    if (previewDoc?.blobUrl) URL.revokeObjectURL(previewDoc.blobUrl)
+    setPreviewDoc(null)
   }
 
   const handleDescargar = async (id, nombre) => {
-    const token = localStorage.getItem('token')
-    const res   = await fetch(
-      `http://localhost:3001/api/documentos/mis-documentos/${id}/descargar`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    const blob = await res.blob()
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href = url; a.download = nombre; a.click()
-    URL.revokeObjectURL(url)
+    try {
+      const token = localStorage.getItem('token')
+      const res   = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/documentos/mis-documentos/${id}/descargar`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      if (res.status === 401) { window.location.href = '/login'; return }
+      if (res.status === 403) { showToast('Este documento aún no ha sido liberado para descarga', 'warn'); return }
+      if (!res.ok) { showToast('Error al descargar el archivo'); return }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = nombre; a.click()
+      URL.revokeObjectURL(url)
+    } catch { showToast('Error de conexión al descargar') }
   }
 
   return (
     <>
+      <Toast toast={toast} />
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
       <style>{`
         @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
@@ -133,6 +227,34 @@ export default function MisCasosPage() {
           cursor:pointer; transition:all 0.15s ease; flex-shrink:0;
         }
         .mc-dl-btn:hover { background:rgba(201,168,76,0.2); border-color:rgba(201,168,76,0.4); }
+
+        /* ── Responsive ≤700px ──────────────────────────────── */
+        .mc-page-header  { padding: 24px 32px 20px; }
+        .mc-page-content { padding: 24px 32px; max-width: 900px; }
+        .mc-stats-grid   { grid-template-columns: repeat(3,1fr); gap: 12px; }
+        .mc-stat-num     { font-size: 30px; }
+        .mc-card-hdr     { padding: 16px 20px; display:flex; align-items:center; gap:14px; }
+        .mc-card-right   { display:flex; align-items:center; gap:10px; flex-shrink:0; }
+        .mc-doc-actions  { display:flex; gap:6px; flex-shrink:0; }
+
+        @media (max-width: 700px) {
+          .mc-page-header  { padding: 14px 16px 12px; }
+          .mc-page-content { padding: 12px 14px; }
+          .mc-stats-grid   { grid-template-columns: repeat(3,1fr); gap: 8px; }
+          .mc-stat-num     { font-size: 22px !important; letter-spacing: -0.5px !important; }
+          .mc-stat-card    { padding: 10px 10px !important; }
+          .mc-stat-label   { font-size: 9px !important; letter-spacing: 1px !important; }
+
+          .mc-card-hdr     { padding: 12px 14px; gap: 10px; flex-wrap: wrap; }
+          .mc-card-icon    { width: 34px !important; height: 34px !important; }
+          .mc-card-right   { width: 100%; justify-content: flex-end; gap: 8px; }
+
+          .mc-doc-row      { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+          .mc-doc-info     { flex: 1 1 100%; min-width: 0; }
+          .mc-doc-actions  { flex-direction: row; justify-content: flex-end; width: 100%; }
+
+          .mc-chip         { padding: 5px 10px; font-size: 11px; }
+        }
       `}</style>
 
       <div style={{
@@ -145,10 +267,9 @@ export default function MisCasosPage() {
       }}>
 
         {/* ── Page header ────────────────────────────────────── */}
-        <div className="mc-fade" style={{
+        <div className="mc-fade mc-page-header" style={{
           background:'linear-gradient(135deg,rgba(6,16,40,0.97) 0%,rgba(12,26,56,0.9) 100%)',
           borderBottom:'1px solid rgba(201,168,76,0.14)',
-          padding:'24px 32px 20px',
           position:'relative', overflow:'hidden',
         }}>
           {[160,110].map((s,i)=>(
@@ -168,18 +289,18 @@ export default function MisCasosPage() {
           <div style={{position:'absolute',bottom:0,left:'32px',width:'44px',height:'1px',background:'linear-gradient(90deg,rgba(201,168,76,0.55),transparent)'}}/>
         </div>
 
-        <div style={{padding:'24px 32px',maxWidth:'900px'}}>
+        <div className="mc-page-content">
 
           {/* Stats */}
-          <div className="mc-fade" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:'12px',marginBottom:'20px',animationDelay:'0.06s'}}>
+          <div className="mc-fade mc-stats-grid" style={{display:'grid',marginBottom:'20px',animationDelay:'0.06s'}}>
             {[
               {label:'Casos activos', val:activos,    color:'#93BBFC', bg:'rgba(59,130,246,0.08)',  border:'rgba(59,130,246,0.2)' },
               {label:'Pendientes',    val:pendientes, color:'#FCD34D', bg:'rgba(245,158,11,0.08)', border:'rgba(245,158,11,0.2)'},
               {label:'Cerrados',      val:cerrados,   color:'#9CA3AF', bg:'rgba(107,114,128,0.08)',border:'rgba(107,114,128,0.15)'},
             ].map((s,i)=>(
-              <div key={s.label} className="mc-fade" style={{background:s.bg,border:`1px solid ${s.border}`,borderRadius:'12px',padding:'14px 18px',backdropFilter:'blur(12px)',animationDelay:`${0.08+i*0.05}s`}}>
-                <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'2px',textTransform:'uppercase',color:`${s.color}99`,margin:'0 0 6px'}}>{s.label}</p>
-                <p style={{fontFamily:"'Inter',sans-serif",fontSize:'30px',fontWeight:'800',color:'rgba(255,255,255,0.93)',margin:0,lineHeight:1,letterSpacing:'-1px'}}>{s.val}</p>
+              <div key={s.label} className="mc-fade mc-stat-card" style={{background:s.bg,border:`1px solid ${s.border}`,borderRadius:'12px',padding:'14px 18px',backdropFilter:'blur(12px)',animationDelay:`${0.08+i*0.05}s`}}>
+                <p className="mc-stat-label" style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'2px',textTransform:'uppercase',color:`${s.color}99`,margin:'0 0 6px'}}>{s.label}</p>
+                <p className="mc-stat-num" style={{fontFamily:"'Inter',sans-serif",fontSize:'30px',fontWeight:'800',color:'rgba(255,255,255,0.93)',margin:0,lineHeight:1,letterSpacing:'-1px'}}>{s.val}</p>
               </div>
             ))}
           </div>
@@ -247,9 +368,9 @@ export default function MisCasosPage() {
 
                       {/* Header */}
                       <div style={{flex:1}} onClick={()=>toggleCaso(caso.id_caso)}>
-                        <div style={{padding:'16px 20px',display:'flex',alignItems:'center',gap:'14px'}}>
+                        <div className="mc-card-hdr">
                           {/* Ícono estado */}
-                          <div style={{
+                          <div className="mc-card-icon" style={{
                             width:'40px', height:'40px', borderRadius:'10px', flexShrink:0,
                             background:cfg.cardBg, border:`1px solid ${cfg.cardBorder}`,
                             display:'flex', alignItems:'center', justifyContent:'center',
@@ -274,7 +395,24 @@ export default function MisCasosPage() {
                             </span>
                           </div>
 
-                          <div style={{display:'flex',alignItems:'center',gap:'10px',flexShrink:0}}>
+                          <div className="mc-card-right">
+                            {(() => {
+                              const semaforo = calcularSemaforo(caso, docsPorCaso[caso.id_caso] || [])
+                              if (!semaforo) return null
+                              const s = SEMAFORO_CFG[semaforo]
+                              return (
+                                <div
+                                  title={s.label}
+                                  style={{
+                                    width: '10px', height: '10px', borderRadius: '50%',
+                                    background: s.color,
+                                    boxShadow: `0 0 6px ${s.color}`,
+                                    flexShrink: 0,
+                                    cursor: 'help',
+                                  }}
+                                />
+                              )
+                            })()}
                             <Badge estado={caso.estado}/>
                             {expanded
                               ? <ChevronDown size={15} style={{color:'rgba(255,255,255,0.3)'}}/>
@@ -284,8 +422,46 @@ export default function MisCasosPage() {
                         </div>
 
                         {/* Panel expandido */}
-                        {expanded && (
+                        {expanded && (() => {
+                          const TIPO_CFG = {
+                            auto:      { label:'Auto',      color:'#FB923C', Icon:Gavel    },
+                            sentencia: { label:'Sentencia', color:'#FCA5A5', Icon:Scale    },
+                            audiencia: { label:'Audiencia', color:'#86EFAC', Icon:Users    },
+                            oficio:    { label:'Oficio',    color:'#93BBFC', Icon:FileText },
+                            otro:      { label:'Notif.',    color:'#C4B5FD', Icon:Bell     },
+                          }
+                          const movs = movsPorCaso[caso.id_caso] || []
+                          return (
                           <div style={{borderTop:'1px solid rgba(255,255,255,0.06)',padding:'14px 20px 16px',background:'rgba(4,12,32,0.4)'}}>
+
+                            {/* ── Alertas procesales ── */}
+                            {movs.length > 0 && (
+                              <div style={{marginBottom:'16px'}}>
+                                <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'2px',textTransform:'uppercase',color:'rgba(251,146,60,0.75)',margin:'0 0 10px',display:'flex',alignItems:'center',gap:'6px'}}>
+                                  <Bell size={12}/> Alertas procesales ({movs.length})
+                                </p>
+                                <div style={{display:'flex',flexDirection:'column',gap:'6px'}}>
+                                  {movs.map(mov => {
+                                    const c = TIPO_CFG[mov.tipo] || TIPO_CFG.otro
+                                    const Icon = c.Icon
+                                    const fecha = new Date(mov.fecha_movimiento + 'T12:00:00').toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'})
+                                    return (
+                                      <div key={mov.id_movimiento} style={{display:'flex',gap:'10px',alignItems:'flex-start',padding:'10px 12px',background:'rgba(251,146,60,0.05)',border:'1px solid rgba(251,146,60,0.15)',borderRadius:'8px'}}>
+                                        <Icon size={13} style={{color:c.color,flexShrink:0,marginTop:'2px'}}/>
+                                        <div style={{flex:1,minWidth:0}}>
+                                          <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'3px',flexWrap:'wrap'}}>
+                                            <span style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',color:c.color}}>{c.label}</span>
+                                            <span style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',color:'rgba(255,255,255,0.3)'}}>{fecha}</span>
+                                          </div>
+                                          <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.65)',margin:0,lineHeight:1.5}}>{mov.descripcion}</p>
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
                             <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'2px',textTransform:'uppercase',color:'rgba(201,168,76,0.65)',margin:'0 0 12px',display:'flex',alignItems:'center',gap:'6px'}}>
                               <FileText size={12}/> Documentos del expediente
                             </p>
@@ -303,31 +479,195 @@ export default function MisCasosPage() {
                                 </p>
                               </div>
                             ) : (
-                              <div style={{background:'rgba(8,20,48,0.5)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'10px',overflow:'hidden'}}>
-                                {(docsPorCaso[caso.id_caso]||[]).map(doc=>(
-                                  <div key={doc.id_documento} className="mc-doc-row">
-                                    <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.15)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                                      <FileText size={14} style={{color:'rgba(201,168,76,0.7)'}}/>
+                              <div style={{background:'rgba(8,20,48,0.5)',border:'1px solid rgba(255,255,255,0.06)',borderRadius:'10px',overflow:'visible'}}>
+                                {(docsPorCaso[caso.id_caso]||[]).map(doc=>{
+                                  const ia = doc.analisis ? (() => { try { return JSON.parse(doc.analisis) } catch { return null } })() : null
+                                  const iaOpen = expandedIA === doc.id_documento
+                                  const urgColor = ia?.urgencia === 'alta' ? '#FCA5A5' : ia?.urgencia === 'media' ? '#FCD34D' : '#86EFAC'
+                                  return (
+                                    <div key={doc.id_documento}>
+                                      <div className="mc-doc-row">
+                                        <div style={{width:'32px',height:'32px',borderRadius:'8px',background:'rgba(201,168,76,0.08)',border:'1px solid rgba(201,168,76,0.15)',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                                          <FileText size={14} style={{color:'rgba(201,168,76,0.7)'}}/>
+                                        </div>
+                                        <div className="mc-doc-info" style={{flex:1,minWidth:0}}>
+                                          <p style={{fontFamily:"'Inter',sans-serif",fontSize:'13px',fontWeight:'500',color:'rgba(255,255,255,0.85)',margin:'0 0 2px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                                            {doc.nombre_original}
+                                          </p>
+                                          <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',color:'rgba(255,255,255,0.3)',margin:0}}>
+                                            {new Date(doc.createdAt).toLocaleDateString('es-MX')}
+                                            {doc.descripcion ? ` · ${doc.descripcion}` : ''}
+                                          </p>
+                                          {ia && (
+                                            <button
+                                              onClick={e => { e.stopPropagation(); setExpandedIA(iaOpen ? null : doc.id_documento) }}
+                                              style={{
+                                                display:'inline-flex', alignItems:'center', gap:'4px',
+                                                marginTop:'3px',
+                                                padding:'3px 9px', borderRadius:'6px',
+                                                background:'rgba(139,92,246,0.1)', border:'1px solid rgba(139,92,246,0.28)',
+                                                color:'rgba(196,181,253,0.85)',
+                                                fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'600',
+                                                cursor:'pointer', transition:'all 0.15s ease',
+                                              }}
+                                            >
+                                              <Sparkles size={9}/> Resumen IA {iaOpen ? <ChevronUp size={9}/> : <ChevronDown size={9}/>}
+                                            </button>
+                                          )}
+                                        </div>
+                                        {doc.bloqueado ? (
+                                          <button
+                                            onClick={e=>{e.stopPropagation(); setPreviewDoc({ id: doc.id_documento, nombre: doc.nombre_original, tipo: doc.tipo, blobUrl: null, bloqueado: true })}}
+                                            style={{
+                                              display:'inline-flex', alignItems:'center', gap:'5px',
+                                              padding:'5px 11px', borderRadius:'7px',
+                                              background:'rgba(251,146,60,0.08)',
+                                              border:'1px solid rgba(251,146,60,0.22)',
+                                              color:'rgba(251,146,60,0.65)',
+                                              fontFamily:"'Inter',sans-serif", fontSize:'11px', fontWeight:'600',
+                                              cursor:'pointer', flexShrink:0,
+                                              transition:'all 0.15s ease',
+                                            }}
+                                          >
+                                            <Lock size={11}/> Vista previa
+                                          </button>
+                                        ) : (
+                                          <div className="mc-doc-actions">
+                                            <button
+                                              className="mc-dl-btn"
+                                              onClick={e=>{e.stopPropagation(); handlePreview(doc)}}
+                                              style={{ background:'rgba(59,130,246,0.1)', borderColor:'rgba(59,130,246,0.25)', color:'rgba(147,187,252,0.85)' }}
+                                            >
+                                              <Eye size={11}/> Ver
+                                            </button>
+                                            <button className="mc-dl-btn"
+                                              onClick={e=>{e.stopPropagation();handleDescargar(doc.id_documento,doc.nombre_original)}}>
+                                              <Download size={11}/> Descargar
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                      {ia && iaOpen && (
+                                        <div style={{
+                                          padding:'12px 16px',
+                                          background:'rgba(139,92,246,0.06)',
+                                          border:'1px dashed rgba(139,92,246,0.28)',
+                                          borderRadius:'8px',
+                                          margin:'0 0 6px',
+                                        }}>
+                                          <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'8px'}}>
+                                            <Sparkles size={12} style={{color:'#C4B5FD',flexShrink:0}}/>
+                                            <span style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',fontWeight:'700',letterSpacing:'1.5px',textTransform:'uppercase',color:'rgba(196,181,253,0.8)'}}>
+                                              Resumen IA
+                                            </span>
+                                            {ia.urgencia && (
+                                              <span style={{marginLeft:'auto',padding:'2px 8px',borderRadius:'4px',background:`${urgColor}18`,border:`1px solid ${urgColor}40`,fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',color:urgColor,textTransform:'uppercase',letterSpacing:'0.5px'}}>
+                                                {ia.urgencia === 'alta' ? 'Urgencia alta' : ia.urgencia === 'media' ? 'Urgencia media' : 'Urgencia baja'}
+                                              </span>
+                                            )}
+                                          </div>
+                                          {ia.resumen && (
+                                            <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.7)',margin:'0 0 8px',lineHeight:1.6}}>
+                                              {ia.resumen}
+                                            </p>
+                                          )}
+                                          {ia.puntosClave?.length > 0 && (
+                                            <div>
+                                              <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'1px',textTransform:'uppercase',color:'rgba(196,181,253,0.6)',margin:'0 0 5px'}}>
+                                                Puntos clave
+                                              </p>
+                                              <ul style={{listStyle:'none',padding:0,margin:0,display:'flex',flexDirection:'column',gap:'4px'}}>
+                                                {ia.puntosClave.map((p,i) => (
+                                                  <li key={i} style={{display:'flex',gap:'7px',alignItems:'flex-start',fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.6)',lineHeight:1.5}}>
+                                                    <span style={{color:'#C4B5FD',flexShrink:0,marginTop:'1px'}}>&#9679;</span>{p}
+                                                  </li>
+                                                ))}
+                                              </ul>
+                                            </div>
+                                          )}
+                                        </div>
+                                      )}
                                     </div>
-                                    <div style={{flex:1,minWidth:0}}>
-                                      <p style={{fontFamily:"'Inter',sans-serif",fontSize:'13px',fontWeight:'500',color:'rgba(255,255,255,0.85)',margin:'0 0 2px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-                                        {doc.nombre_original}
-                                      </p>
-                                      <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',color:'rgba(255,255,255,0.3)',margin:0}}>
-                                        {new Date(doc.createdAt).toLocaleDateString('es-MX')}
-                                        {doc.descripcion ? ` · ${doc.descripcion}` : ''}
-                                      </p>
-                                    </div>
-                                    <button className="mc-dl-btn"
-                                      onClick={e=>{e.stopPropagation();handleDescargar(doc.id_documento,doc.nombre_original)}}>
-                                      <Download size={11}/> Descargar
-                                    </button>
-                                  </div>
-                                ))}
+                                  )
+                                })}
                               </div>
                             )}
+
+                            {/* ── Chat IA ── */}
+                            {(() => {
+                              const cs = getChatState(caso.id_caso)
+                              return (
+                                <div style={{marginTop:'16px'}}>
+                                  <button
+                                    onClick={e=>{e.stopPropagation();setChatState(caso.id_caso,{open:!cs.open})}}
+                                    style={{display:'flex',alignItems:'center',gap:'6px',background:'none',border:'none',cursor:'pointer',padding:0,marginBottom: cs.open ? '10px' : 0}}
+                                  >
+                                    <Sparkles size={12} style={{color:'rgba(201,168,76,0.75)'}}/>
+                                    <span style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'2px',textTransform:'uppercase',color:'rgba(201,168,76,0.75)'}}>
+                                      Asistente IA {cs.open ? <ChevronDown size={10}/> : <ChevronRight size={10}/>}
+                                    </span>
+                                  </button>
+                                  {cs.open && (
+                                    <div style={{background:'rgba(8,20,48,0.6)',border:'1px solid rgba(201,168,76,0.12)',borderRadius:'10px',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
+                                      {/* Mensajes */}
+                                      <div style={{maxHeight:'260px',overflowY:'auto',padding:'12px 14px',display:'flex',flexDirection:'column',gap:'10px'}}>
+                                        {cs.history.length === 0 && (
+                                          <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'10px',opacity:0.5}}>
+                                            <MessageSquare size={16} style={{color:'rgba(201,168,76,0.4)',flexShrink:0}}/>
+                                            <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.4)',margin:0,lineHeight:1.5}}>
+                                              Pregunta sobre el estado de tu caso, documentos o próximas fechas.
+                                            </p>
+                                          </div>
+                                        )}
+                                        {cs.history.map((msg,i)=>(
+                                          <div key={i} style={{display:'flex',justifyContent:msg.role==='user'?'flex-end':'flex-start'}}>
+                                            <div style={{
+                                              maxWidth:'85%',padding:'8px 12px',
+                                              borderRadius:msg.role==='user'?'10px 10px 3px 10px':'10px 10px 10px 3px',
+                                              background:msg.role==='user'?'rgba(201,168,76,0.12)':'rgba(139,92,246,0.1)',
+                                              border:msg.role==='user'?'1px solid rgba(201,168,76,0.25)':'1px solid rgba(139,92,246,0.2)',
+                                            }}>
+                                              <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.82)',margin:0,lineHeight:1.55,whiteSpace:'pre-wrap'}}>
+                                                {msg.content}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        ))}
+                                        {cs.loading && (
+                                          <div style={{display:'flex',justifyContent:'flex-start'}}>
+                                            <div style={{padding:'8px 12px',borderRadius:'10px 10px 10px 3px',background:'rgba(139,92,246,0.1)',border:'1px solid rgba(139,92,246,0.2)',display:'flex',alignItems:'center',gap:'6px'}}>
+                                              <Loader2 size={12} style={{color:'#C4B5FD',animation:'spin 1s linear infinite'}}/>
+                                              <span style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',color:'rgba(196,181,253,0.7)'}}>Consultando expediente…</span>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                      {/* Input */}
+                                      <div style={{padding:'10px 12px',borderTop:'1px solid rgba(255,255,255,0.05)',display:'flex',gap:'8px',alignItems:'center'}}>
+                                        <input
+                                          value={cs.input}
+                                          onChange={e=>setChatState(caso.id_caso,{input:e.target.value})}
+                                          onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();sendClientChat(caso.id_caso)}}}
+                                          placeholder="Escribe tu consulta…"
+                                          style={{flex:1,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'8px',padding:'8px 12px',color:'rgba(255,255,255,0.82)',fontFamily:"'Inter',sans-serif",fontSize:'12px',outline:'none'}}
+                                        />
+                                        <button
+                                          onClick={()=>sendClientChat(caso.id_caso)}
+                                          disabled={!cs.input.trim()||cs.loading}
+                                          style={{width:'34px',height:'34px',borderRadius:'8px',flexShrink:0,background:cs.input.trim()&&!cs.loading?'rgba(201,168,76,0.15)':'rgba(255,255,255,0.03)',border:cs.input.trim()&&!cs.loading?'1px solid rgba(201,168,76,0.3)':'1px solid rgba(255,255,255,0.06)',color:cs.input.trim()&&!cs.loading?'#C9A84C':'rgba(255,255,255,0.15)',display:'flex',alignItems:'center',justifyContent:'center',cursor:cs.input.trim()&&!cs.loading?'pointer':'default',transition:'all 0.15s'}}
+                                        >
+                                          <Send size={13}/>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
+
                           </div>
-                        )}
+                          )
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -337,6 +677,142 @@ export default function MisCasosPage() {
           )}
         </div>
       </div>
+
+      {/* ── Modal Preview de documentos ── */}
+      {previewDoc && (
+        <div
+          onClick={closePreview}
+          style={{
+            position: 'fixed', inset: 0, zIndex: 1000,
+            background: 'rgba(2,8,24,0.92)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: '24px',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: '860px',
+              background: 'rgba(6,16,40,0.97)',
+              border: '1px solid rgba(201,168,76,0.2)',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              display: 'flex', flexDirection: 'column',
+              maxHeight: '90vh',
+            }}
+          >
+            {/* Header modal */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: '12px',
+              padding: '14px 20px',
+              borderBottom: '1px solid rgba(255,255,255,0.07)',
+              background: 'rgba(8,20,48,0.6)',
+            }}>
+              {previewDoc.bloqueado
+                ? <Lock size={16} style={{ color: 'rgba(251,146,60,0.7)', flexShrink: 0 }} />
+                : <FileText size={16} style={{ color: 'rgba(201,168,76,0.8)', flexShrink: 0 }} />
+              }
+              <span style={{
+                flex: 1, fontFamily: "'Inter',sans-serif", fontSize: '13px',
+                fontWeight: '600', color: previewDoc.bloqueado ? 'rgba(251,146,60,0.8)' : 'rgba(255,255,255,0.85)',
+                whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+              }}>
+                {previewDoc.nombre}
+              </span>
+              <button
+                onClick={closePreview}
+                style={{
+                  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '7px', padding: '5px 12px',
+                  color: 'rgba(255,255,255,0.6)', fontFamily: "'Inter',sans-serif",
+                  fontSize: '12px', cursor: 'pointer',
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+
+            {/* Contenido */}
+            <div style={{ flex: 1, overflow: 'hidden', minHeight: '400px', display: 'flex', position: 'relative' }}>
+              {previewDoc.bloqueado ? (
+                <>
+                  {/* Fondo difuminado simulado con líneas */}
+                  <div style={{
+                    flex: 1, padding: '32px',
+                    display: 'flex', flexDirection: 'column', gap: '12px',
+                    filter: 'blur(4px)', opacity: 0.18, pointerEvents: 'none',
+                    userSelect: 'none',
+                  }}>
+                    {[80,60,90,50,70,40,85,55].map((w,i) => (
+                      <div key={i} style={{
+                        height: '12px', borderRadius: '4px',
+                        width: `${w}%`,
+                        background: 'rgba(255,255,255,0.4)',
+                      }}/>
+                    ))}
+                  </div>
+                  {/* Overlay con candado */}
+                  <div style={{
+                    position: 'absolute', inset: 0,
+                    display: 'flex', flexDirection: 'column',
+                    alignItems: 'center', justifyContent: 'center', gap: '16px',
+                    background: 'rgba(2,8,24,0.55)',
+                    backdropFilter: 'blur(2px)',
+                  }}>
+                    <div style={{
+                      width: '64px', height: '64px', borderRadius: '16px',
+                      background: 'rgba(251,146,60,0.12)',
+                      border: '1px solid rgba(251,146,60,0.3)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Lock size={28} style={{ color: 'rgba(251,146,60,0.8)' }} />
+                    </div>
+                    <div style={{ textAlign: 'center', maxWidth: '320px' }}>
+                      <p style={{
+                        fontFamily: "'Playfair Display',serif", fontSize: '16px',
+                        fontWeight: '700', color: 'rgba(255,255,255,0.85)', margin: '0 0 8px',
+                      }}>
+                        Documento en revisión
+                      </p>
+                      <p style={{
+                        fontFamily: "'Inter',sans-serif", fontSize: '13px',
+                        color: 'rgba(255,255,255,0.45)', margin: 0, lineHeight: 1.6,
+                      }}>
+                        El abogado liberará este documento cuando esté listo para tu consulta. Recibirás una notificación por correo.
+                      </p>
+                    </div>
+                  </div>
+                </>
+              ) : previewDoc.tipo?.startsWith('image/') ? (
+                <img
+                  src={previewDoc.blobUrl}
+                  alt={previewDoc.nombre}
+                  style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
+                />
+              ) : previewDoc.tipo === 'application/pdf' ? (
+                <iframe
+                  src={previewDoc.blobUrl}
+                  title={previewDoc.nombre}
+                  style={{ width: '100%', height: '100%', border: 'none', minHeight: '500px' }}
+                />
+              ) : (
+                <div style={{
+                  flex: 1, display: 'flex', flexDirection: 'column',
+                  alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '40px',
+                }}>
+                  <FileText size={48} style={{ color: 'rgba(201,168,76,0.4)' }} />
+                  <p style={{ fontFamily: "'Inter',sans-serif", fontSize: '14px', color: 'rgba(255,255,255,0.55)', margin: 0, textAlign: 'center' }}>
+                    Vista previa no disponible para este tipo de archivo.<br />
+                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)' }}>{previewDoc.tipo}</span>
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

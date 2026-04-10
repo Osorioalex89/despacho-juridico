@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start http://localhost:5174)",
+      "Bash(node src/scripts/resetAdmin.js)",
+      "Bash(taskkill /PID 18288 /F)",
+      "Bash(cmd /c \"taskkill /PID 18288 /F\")",
+      "Bash(echo \"Exit: $?\")",
+      "Bash(cmd /c \"taskkill /PID 18288 /F & netstat -ano | findstr :3001\")",
+      "Bash(cmd /c \"netstat -ano | findstr :3001\")",
+      "Bash(cmd /c \"taskkill /IM node.exe /F\")",
+      "Bash(cmd /c \"taskkill /IM node.exe /F 2>&1 && echo OK || echo NO_PROCESS\")",
+      "Bash(cmd /c \"wmic process where name=''node.exe'' get processid,commandline 2>&1\")",
+      "Bash(wmic process:*)",
+      "Bash(taskkill //IM node.exe //F)",
+      "Bash(node -e \":*)",
+      "Bash(npm run:*)",
+      "Bash(start http://localhost:5173)",
+      "Bash(npx kill-port:*)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(npx claude-code-templates@latest --skill creative-design/frontend-design)",
+      "Bash(npx claude-code-templates@latest --skill creative-design/ui-design-system)",
+      "Bash(npx claude-code-templates@latest --skill creative-design/ui-ux-pro-max)",
+      "Bash(npx claude-code-templates@latest --skill creative-design/3d-web-experience)",
+      "Bash(npx claude-code-templates@latest --skill development/agent-development)",
+      "Bash(node -e ':*)",
+      "Bash(npm create:*)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); const deps={...p.dependencies,...p.devDependencies}; ['tailwindcss','@tailwindcss/vite','framer-motion','lucide-react'].forEach\\(d => console.log\\(d+':', deps[d]||'NO'\\)\\)\")"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "claude-flow"
+  ]
+}

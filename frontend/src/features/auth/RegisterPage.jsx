@@ -1,7 +1,11 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../services/axios.config'
 import { Eye, EyeOff, CheckCircle } from 'lucide-react'
+
+// Clave de sitio Cloudflare Turnstile
+// TEST: '1x00000000000000000000AA' (siempre pasa — reemplazar por la real)
+const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'
 
 // ── Logo SC (mismo del login) ─────────────────────────────────────
 const LogoSC = ({ size = 60 }) => (
@@ -36,12 +40,39 @@ const LogoSC = ({ size = 60 }) => (
 
 export default function RegisterPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const origen = searchParams.get('source') || null
 
   const [form,    setForm]    = useState({ nombre:'', correo:'', contrasena:'', confirmar:'' })
   const [error,   setError]   = useState('')
   const [loading, setLoading] = useState(false)
   const [exito,   setExito]   = useState(false)
   const [showPass,setShowPass]= useState(false)
+  const turnstileRef          = useRef(null)
+  const turnstileToken        = useRef('')
+
+  // ── Cargar e inicializar Turnstile ────────────────────────────
+  useEffect(() => {
+    if (document.getElementById('cf-turnstile-script')) return
+
+    const script   = document.createElement('script')
+    script.id      = 'cf-turnstile-script'
+    script.src     = 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+    script.async   = true
+    script.defer   = true
+    document.head.appendChild(script)
+
+    script.onload = () => {
+      if (window.turnstile && turnstileRef.current) {
+        window.turnstile.render(turnstileRef.current, {
+          sitekey:  TURNSTILE_SITE_KEY,
+          theme:    'dark',
+          callback: (token) => { turnstileToken.current = token },
+          'expired-callback': () => { turnstileToken.current = '' },
+        })
+      }
+    }
+  }, [])
 
   const handleChange = e => {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
@@ -63,7 +94,11 @@ export default function RegisterPage() {
     setLoading(true); setError('')
     try {
       await api.post('/auth/registro', {
-        nombre: form.nombre, correo: form.correo, contrasena: form.contrasena,
+        nombre:         form.nombre,
+        correo:         form.correo,
+        contrasena:     form.contrasena,
+        turnstileToken: turnstileToken.current || undefined,
+        ...(origen && { origen }),
       })
       setExito(true)
     } catch (err) {
@@ -113,7 +148,8 @@ export default function RegisterPage() {
             ¡Solicitud enviada!
           </h2>
           <p style={{fontFamily:"'Inter',sans-serif",fontSize:'13px',color:'rgba(255,255,255,0.45)',margin:'0 0 24px',lineHeight:1.7,maxWidth:'300px',marginLeft:'auto',marginRight:'auto'}}>
-            Tu cuenta fue creada y está <strong style={{color:'#FCD34D'}}>pendiente de aprobación</strong>. El despacho revisará tu solicitud y te dará acceso en breve.
+            Revisa tu correo y haz clic en el enlace de verificación.
+            Después el despacho revisará tu solicitud y te dará <strong style={{color:'#FCD34D'}}>acceso al sistema</strong>.
           </p>
 
           {/* Info contacto */}
@@ -178,7 +214,7 @@ export default function RegisterPage() {
           display:block; font-family:'Inter',sans-serif;
           font-size:11px; font-weight:700;
           letter-spacing:1.8px; text-transform:uppercase;
-          color:rgba(255,255,255,0.5); margin-bottom:7px;
+          color:rgba(255,255,255,0.5); margin-bottom:4px;
         }
 
         .rg-btn {
@@ -219,20 +255,20 @@ export default function RegisterPage() {
           backdropFilter:'blur(24px)', WebkitBackdropFilter:'blur(24px)',
           border:'1px solid rgba(201,168,76,0.22)', borderRadius:'24px',
           boxShadow:'0 25px 80px rgba(0,0,0,0.7), 0 0 0 1px rgba(201,168,76,0.08)',
-          padding:'36px 40px', overflow:'hidden',
+          padding:'22px 36px', overflow:'hidden',
         }}>
           <div style={{position:'absolute',top:0,left:0,right:0,height:'1px',background:'linear-gradient(90deg,transparent,rgba(201,168,76,0.4),transparent)'}}/>
 
           {/* Logo + Nombre */}
-          <div style={{textAlign:'center',marginBottom:'24px'}}>
-            <div style={{display:'inline-block',marginBottom:'14px'}}>
-              <LogoSC size={58}/>
+          <div style={{textAlign:'center',marginBottom:'14px'}}>
+            <div style={{display:'inline-block',marginBottom:'8px'}}>
+              <LogoSC size={52}/>
             </div>
             <h1 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:'19px',fontWeight:'700',color:'rgba(255,255,255,0.97)',margin:'0 0 4px',textShadow:'0 2px 8px rgba(0,0,0,0.4)',lineHeight:1.2}}>
               Lic. Horacio{' '}
               <span style={{color:'#C9A84C'}}>Sánchez Cerino</span>
             </h1>
-            <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',color:'rgba(201,168,76,0.6)',letterSpacing:'3px',textTransform:'uppercase',margin:'0 0 12px'}}>
+            <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',color:'rgba(201,168,76,0.6)',letterSpacing:'3px',textTransform:'uppercase',margin:'0 0 8px'}}>
               Crear cuenta
             </p>
             <div style={{width:'36px',height:'2px',margin:'0 auto',background:'linear-gradient(90deg,transparent,#C9A84C,transparent)',borderRadius:'2px'}}/>
@@ -256,7 +292,7 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit}>
 
             {/* Nombre */}
-            <div style={{marginBottom:'14px'}}>
+            <div style={{marginBottom:'10px'}}>
               <label className="rg-label">Nombre completo</label>
               <input className="rg-input" name="nombre" type="text"
                 value={form.nombre} onChange={handleChange}
@@ -264,7 +300,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Correo */}
-            <div style={{marginBottom:'14px'}}>
+            <div style={{marginBottom:'10px'}}>
               <label className="rg-label">Correo electrónico</label>
               <input className="rg-input" name="correo" type="email"
                 value={form.correo} onChange={handleChange}
@@ -272,7 +308,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Contraseña */}
-            <div style={{marginBottom:'14px'}}>
+            <div style={{marginBottom:'10px'}}>
               <label className="rg-label">Contraseña</label>
               <div style={{position:'relative'}}>
                 <input className="rg-input"
@@ -289,7 +325,7 @@ export default function RegisterPage() {
             </div>
 
             {/* Confirmar */}
-            <div style={{marginBottom:'20px'}}>
+            <div style={{marginBottom:'10px'}}>
               <label className="rg-label">Confirmar contraseña</label>
               <input className="rg-input"
                 name="confirmar"
@@ -300,7 +336,7 @@ export default function RegisterPage() {
 
             {/* Aviso pendiente */}
             <div style={{
-              padding:'11px 14px', marginBottom:'20px',
+              padding:'10px 13px', marginBottom:'12px',
               background:'rgba(245,158,11,0.08)',
               border:'1px solid rgba(245,158,11,0.2)',
               borderRadius:'10px',
@@ -312,13 +348,18 @@ export default function RegisterPage() {
               </p>
             </div>
 
+            {/* Cloudflare Turnstile */}
+            <div style={{ marginBottom:'12px', display:'flex', justifyContent:'center' }}>
+              <div ref={turnstileRef}/>
+            </div>
+
             <button type="submit" disabled={loading} className="rg-btn">
               {loading ? 'Creando cuenta…' : 'Crear cuenta'}
             </button>
           </form>
 
           {/* Link login */}
-          <p style={{textAlign:'center',marginTop:'18px',fontFamily:"'Inter',sans-serif",fontSize:'13px',color:'rgba(255,255,255,0.35)'}}>
+          <p style={{textAlign:'center',marginTop:'12px',fontFamily:"'Inter',sans-serif",fontSize:'13px',color:'rgba(255,255,255,0.35)'}}>
             ¿Ya tienes cuenta?{' '}
             <a href="/login" style={{color:'#C9A84C',fontWeight:'600',textDecoration:'none'}}>
               Inicia sesión

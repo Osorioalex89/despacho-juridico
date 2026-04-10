@@ -8,6 +8,7 @@ import {
   AlertCircle, CheckCircle, XCircle,
   Edit3, User, CalendarDays
 } from 'lucide-react'
+import { useToast, Toast } from '../../components/ui/Toast'
 
 // ── Constantes ────────────────────────────────────────────────────
 const DIAS   = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb']
@@ -105,12 +106,16 @@ const IconCalendarEmpty = () => (
   </svg>
 )
 
+const toLocalStr = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+
 export default function AgendaPage() {
+  const { toast, showToast } = useToast()
   const hoy = new Date()
 
   const [año,        setAño]        = useState(hoy.getFullYear())
   const [mes,        setMes]        = useState(hoy.getMonth())
-  const [diaSelecto, setDiaSelecto] = useState(hoy.toISOString().split('T')[0])
+  const [diaSelecto, setDiaSelecto] = useState(toLocalStr(hoy))
   const [citas,      setCitas]      = useState([])
   const [clientes,   setClientes]   = useState([])
   const [loading,    setLoading]    = useState(true)
@@ -172,13 +177,13 @@ export default function AgendaPage() {
   // ── Acciones ────────────────────────────────────────────────────
   const handleEstado = async (id, estado) => {
     try { await updateEstadoCita(id, estado); fetchCitas() }
-    catch { alert('Error al actualizar') }
+    catch { showToast('Error al actualizar') }
   }
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar esta cita?')) return
     try { await deleteCita(id); fetchCitas() }
-    catch { alert('Error al eliminar') }
+    catch { showToast('Error al eliminar') }
   }
 
   const abrirNueva = () => { setCitaEdit(null); setModalOpen(true) }
@@ -198,6 +203,7 @@ export default function AgendaPage() {
 
   return (
     <>
+      <Toast toast={toast} />
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
       <style>{`
         @keyframes fadeUp {
@@ -418,7 +424,7 @@ export default function AgendaPage() {
                   fontSize: '16px', fontWeight: '700',
                   color: 'rgba(255,255,255,0.92)', margin: '0 0 1px',
                   textShadow: '0 1px 3px rgba(0,0,0,0.3)',
-                }}>
+                }} translate="no">
                   {MESES[mes]}
                 </p>
                 <p style={{
@@ -604,11 +610,11 @@ export default function AgendaPage() {
                       fontSize:'24px', fontWeight:'700',
                       color:'rgba(255,255,255,0.95)', margin:0,
                       textShadow:'0 2px 5px rgba(0,0,0,0.3)',
-                    }}>
+                    }} translate="no">
                       {nombreDia}, {diaNumero} de {nombreMesDay}
                     </h2>
                     {/* Indicador "hoy" */}
-                    {diaSelecto === hoy.toISOString().split('T')[0] && (
+                    {diaSelecto === toLocalStr(hoy) && (
                       <span style={{
                         fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'700',
                         letterSpacing:'2px', textTransform:'uppercase',

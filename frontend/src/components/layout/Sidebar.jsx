@@ -1,10 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
+import { getCasos } from '../../features/cases/casesService'
+import { getCitas } from '../../features/appointments/appointmentsService'
+import { getUsuarios } from '../../features/users/usersService'
 import {
   LayoutDashboard, Users, FolderOpen,
   Calendar, FileText, UserCheck, LogOut,
-  ChevronRight, Shield
+  ChevronRight, Shield, Globe
 } from 'lucide-react'
 
 // ── Logo SVG premium — Monograma "SC" con balanza ────────────────
@@ -40,10 +43,11 @@ const LogoMark = () => (
 const NAV_ITEMS = [
   { label: 'Dashboard',   path: '/panel/dashboard',          icon: LayoutDashboard, roles: ['abogado', 'secretario'] },
   { label: 'Clientes',    path: '/panel/clientes',           icon: Users,           roles: ['abogado', 'secretario'] },
-  { label: 'Casos',       path: '/panel/casos',              icon: FolderOpen,      roles: ['abogado', 'secretario'], badge: '14' },
-  { label: 'Agenda',      path: '/panel/agenda',             icon: Calendar,        roles: ['abogado', 'secretario'], badge: '4', badgeUrgent: true },
+  { label: 'Casos',       path: '/panel/casos',              icon: FolderOpen,      roles: ['abogado', 'secretario'] },
+  { label: 'Agenda',      path: '/panel/agenda',             icon: Calendar,        roles: ['abogado', 'secretario'] },
   { label: 'Documentos',  path: '/panel/documentos',         icon: FileText,        roles: ['abogado', 'secretario'] },
   { label: 'Solicitudes', path: '/panel/usuarios-pendientes',icon: UserCheck,       roles: ['abogado', 'secretario'] },
+  { label: 'Landing',     path: '/panel/solicitudes-landing', icon: Globe,           roles: ['abogado', 'secretario'] },
 ]
 
 const ROL_LABEL = {
@@ -52,9 +56,49 @@ const ROL_LABEL = {
   cliente:    'Cliente',
 }
 
-export default function Sidebar() {
+export default function Sidebar({ isMobileOpen = false, onMobileClose = () => {} }) {
   const { user, logout, canManageUsers } = useAuth()
   const navigate = useNavigate()
+
+  const [badgeCasos, setBadgeCasos] = useState(null)
+  const [badgeAgenda, setBadgeAgenda] = useState(null)
+  const [badgeSolicitudes, setBadgeSolicitudes] = useState(null)
+  const [badgeLanding, setBadgeLanding] = useState(null)
+
+  useEffect(() => {
+    if (!user?.rol || !['abogado', 'secretario'].includes(user.rol)) return
+
+    Promise.allSettled([
+      getCasos({ limit: 1000 }),
+      getCitas({ limit: 1000 }),
+      getUsuarios({ limit: 1000 }),
+    ]).then(([resCasos, resCitas, resUsuarios]) => {
+      if (resCasos.status === 'fulfilled') {
+        const lista = resCasos.value?.data?.casos ?? resCasos.value?.data ?? []
+        const activos = lista.filter(c => c.estado !== 'cerrado').length
+        if (activos > 0) setBadgeCasos(activos)
+      }
+      if (resCitas.status === 'fulfilled') {
+        const lista = resCitas.value?.data?.citas ?? resCitas.value?.data ?? []
+        const pendientes = lista.filter(c => c.estado === 'pendiente').length
+        if (pendientes > 0) setBadgeAgenda(pendientes)
+        // Badge landing: citas pendientes con menos de 24 h (badge urgente dorado)
+        const nuevas = lista.filter(c => {
+          if (c.estado !== 'pendiente') return false
+          const diff = Date.now() - new Date(c.createdAt).getTime()
+          return diff < 24 * 60 * 60 * 1000
+        }).length
+        if (nuevas > 0) setBadgeLanding(nuevas)
+      }
+      if (resUsuarios.status === 'fulfilled') {
+        const lista = resUsuarios.value?.data?.usuarios ?? resUsuarios.value?.data ?? []
+        const pendientesAprobacion = lista.filter(u => u.estado === 'pendiente').length
+        const resetsPendientes = lista.filter(u => u.reset_solicitado).length
+        const total = pendientesAprobacion + resetsPendientes
+        if (total > 0) setBadgeSolicitudes(total)
+      }
+    })
+  }, [user?.rol])
 
   const handleLogout = () => {
     logout()
@@ -135,22 +179,57 @@ export default function Sidebar() {
           50%       { opacity: 0.5; }
         }
         .dot-pulse { animation: pulse-dot 2s ease-in-out infinite; }
+
+        /* ── Responsive: drawer en mobile ─────────────────────── */
+        @media (max-width: 767px) {
+          .sb-aside {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            height: 100vh !important;
+            min-height: 100vh !important;
+            z-index: 70 !important;
+            transform: translateX(-100%);
+            transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: none;
+          }
+          .sb-aside.sb-open {
+            transform: translateX(0);
+            box-shadow: 6px 0 40px rgba(0,0,0,0.7);
+          }
+          .sb-close-btn {
+            display: flex !important;
+          }
+        }
+        @media (min-width: 768px) {
+          .sb-aside {
+            position: relative !important;
+            transform: none !important;
+            transition: none !important;
+          }
+          .sb-close-btn {
+            display: none !important;
+          }
+        }
       `}</style>
 
-      <aside style={{
-        width: '248px',
-        minHeight: '100vh',
-        flexShrink: 0,
-        background: 'rgba(4,12,32,0.97)',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        borderRight: '1px solid rgba(201,168,76,0.15)',
-        boxShadow: '4px 0 24px rgba(0,0,0,0.45)',
-        display: 'flex',
-        flexDirection: 'column',
-        position: 'relative',
-        zIndex: 10,
-      }}>
+      <aside
+        className={`sb-aside${isMobileOpen ? ' sb-open' : ''}`}
+        style={{
+          width: '248px',
+          minHeight: '100vh',
+          flexShrink: 0,
+          background: 'rgba(4,12,32,0.97)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          borderRight: '1px solid rgba(201,168,76,0.15)',
+          boxShadow: '4px 0 24px rgba(0,0,0,0.45)',
+          display: 'flex',
+          flexDirection: 'column',
+          position: 'relative',
+          zIndex: 10,
+        }}
+      >
 
         {/* Glow decorativo */}
         <div style={{
@@ -166,6 +245,42 @@ export default function Sidebar() {
           borderBottom: '1px solid rgba(201,168,76,0.1)',
           position: 'relative',
         }}>
+          {/* Botón cerrar — solo visible en mobile */}
+          <button
+            className="sb-close-btn"
+            onClick={onMobileClose}
+            aria-label="Cerrar menú"
+            style={{
+              display: 'none',
+              position: 'absolute',
+              top: '14px',
+              right: '14px',
+              background: 'rgba(255,255,255,0.05)',
+              border: '1px solid rgba(201,168,76,0.2)',
+              borderRadius: '8px',
+              width: '32px',
+              height: '32px',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+              padding: 0,
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.background = 'rgba(201,168,76,0.12)'
+              e.currentTarget.style.borderColor = 'rgba(201,168,76,0.4)'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+              e.currentTarget.style.borderColor = 'rgba(201,168,76,0.2)'
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <line x1="1" y1="1" x2="13" y2="13" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round"/>
+              <line x1="13" y1="1" x2="1" y2="13" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
+
           <div style={{ display: 'flex', alignItems: 'center', gap: '13px' }}>
             <LogoMark/>
             <div>
@@ -223,62 +338,75 @@ export default function Sidebar() {
             Menú principal
           </p>
 
-          {filteredItems.map(({ label, path, icon: Icon, badge, badgeUrgent }) => (
-            <NavLink
-              key={path}
-              to={path}
-              className={({ isActive }) => `sb-item${isActive ? ' active' : ''}`}
-            >
-              {({ isActive }) => (
-                <>
-                  <Icon
-                    size={17}
-                    className="sb-icon"
-                    style={{
-                      color: isActive ? 'rgba(201,168,76,0.92)' : 'rgba(255,255,255,0.45)',
-                      flexShrink: 0,
-                      transition: 'color 0.15s ease',
-                    }}
-                  />
-                  <span
-                    className="sb-label"
-                    style={{
-                      fontFamily: "'Inter', sans-serif",
-                      fontSize: '14px',
-                      fontWeight: isActive ? '600' : '500',
-                      color: isActive ? 'rgba(201,168,76,0.97)' : 'rgba(255,255,255,0.65)',
-                      flex: 1,
-                      transition: 'all 0.15s ease',
-                      letterSpacing: '0.01em',
-                    }}
-                  >
-                    {label}
-                  </span>
+          {filteredItems.map(({ label, path, icon: Icon, badge }) => {
+            const dynamicBadge =
+              path === '/panel/casos'               ? (badgeCasos       || null) :
+              path === '/panel/agenda'              ? (badgeAgenda      || null) :
+              path === '/panel/usuarios-pendientes' ? (badgeSolicitudes || null) :
+              path === '/panel/solicitudes-landing' ? (badgeLanding     || null) :
+              badge ?? null
 
-                  {badge && (
+            const dynamicBadgeUrgent = (path === '/panel/agenda' && badgeAgenda > 0) ||
+                                       (path === '/panel/solicitudes-landing' && badgeLanding > 0)
+
+            return (
+              <NavLink
+                key={path}
+                to={path}
+                onClick={onMobileClose}
+                className={({ isActive }) => `sb-item${isActive ? ' active' : ''}`}
+              >
+                {({ isActive }) => (
+                  <>
+                    <Icon
+                      size={17}
+                      className="sb-icon"
+                      style={{
+                        color: isActive ? 'rgba(201,168,76,0.92)' : 'rgba(255,255,255,0.45)',
+                        flexShrink: 0,
+                        transition: 'color 0.15s ease',
+                      }}
+                    />
                     <span
-                      className={badgeUrgent ? 'dot-pulse' : ''}
+                      className="sb-label"
                       style={{
                         fontFamily: "'Inter', sans-serif",
-                        fontSize: '10px', fontWeight: '700',
-                        padding: '2px 7px', borderRadius: '10px',
-                        background: badgeUrgent
-                          ? 'rgba(239,68,68,0.18)'
-                          : 'rgba(201,168,76,0.12)',
-                        color: badgeUrgent ? '#FCA5A5' : 'rgba(201,168,76,0.88)',
-                        border: `1px solid ${badgeUrgent
-                          ? 'rgba(239,68,68,0.3)'
-                          : 'rgba(201,168,76,0.24)'}`,
-                        lineHeight: '1',
+                        fontSize: '14px',
+                        fontWeight: isActive ? '600' : '500',
+                        color: isActive ? 'rgba(201,168,76,0.97)' : 'rgba(255,255,255,0.65)',
+                        flex: 1,
+                        transition: 'all 0.15s ease',
+                        letterSpacing: '0.01em',
                       }}
                     >
-                      {badge}
+                      {label}
                     </span>
-                  )}
-                </>
-              )}
-            </NavLink>
-          ))}
+
+                    {dynamicBadge && (
+                      <span
+                        className={dynamicBadgeUrgent ? 'dot-pulse' : ''}
+                        style={{
+                          fontFamily: "'Inter', sans-serif",
+                          fontSize: '10px', fontWeight: '700',
+                          padding: '2px 7px', borderRadius: '10px',
+                          background: dynamicBadgeUrgent
+                            ? 'rgba(239,68,68,0.18)'
+                            : 'rgba(201,168,76,0.12)',
+                          color: dynamicBadgeUrgent ? '#FCA5A5' : 'rgba(201,168,76,0.88)',
+                          border: `1px solid ${dynamicBadgeUrgent
+                            ? 'rgba(239,68,68,0.3)'
+                            : 'rgba(201,168,76,0.24)'}`,
+                          lineHeight: '1',
+                        }}
+                      >
+                        {dynamicBadge}
+                      </span>
+                    )}
+                  </>
+                )}
+              </NavLink>
+            )
+          })}
 
           {/* Sección Administración — solo abogado */}
           {canManageUsers && (
@@ -301,6 +429,7 @@ export default function Sidebar() {
 
               <NavLink
                 to="/panel/usuarios"
+                onClick={onMobileClose}
                 className={({ isActive }) => `sb-item${isActive ? ' active' : ''}`}
               >
                 {({ isActive }) => (
@@ -327,6 +456,19 @@ export default function Sidebar() {
                     >
                       Usuarios
                     </span>
+                    {badgeSolicitudes && (
+                      <span style={{
+                        fontFamily: "'Inter', sans-serif",
+                        fontSize: '10px', fontWeight: '700',
+                        padding: '2px 7px', borderRadius: '10px',
+                        background: 'rgba(201,168,76,0.12)',
+                        color: 'rgba(201,168,76,0.88)',
+                        border: '1px solid rgba(201,168,76,0.24)',
+                        lineHeight: '1',
+                      }}>
+                        {badgeSolicitudes}
+                      </span>
+                    )}
                   </>
                 )}
               </NavLink>
