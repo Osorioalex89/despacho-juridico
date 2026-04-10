@@ -72,14 +72,21 @@ app.use((err, req, res, next) => {
 })
 
 // ── Migraciones seguras (idempotentes) ────────────────────────────
+// Usa ALTER TABLE sin IF NOT EXISTS (compatible con MySQL 5.7+)
+// Ignora error 1060 = columna ya existe
 async function runMigrations() {
   const migrations = [
-    "ALTER TABLE casos ADD COLUMN IF NOT EXISTS reporte_ia TEXT NULL",
-    "ALTER TABLE casos ADD COLUMN IF NOT EXISTS reporte_ia_at DATETIME NULL",
-    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS origen VARCHAR(50) NULL DEFAULT NULL",
+    "ALTER TABLE casos ADD COLUMN reporte_ia TEXT NULL",
+    "ALTER TABLE casos ADD COLUMN reporte_ia_at DATETIME NULL",
+    "ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL",
   ]
   for (const q of migrations) {
-    await sequelize.query(q)
+    try {
+      await sequelize.query(q)
+    } catch (err) {
+      const isDuplicateColumn = err.original?.errno === 1060
+      if (!isDuplicateColumn) throw err
+    }
   }
   console.log('[Migrations] Columnas verificadas.')
 }
