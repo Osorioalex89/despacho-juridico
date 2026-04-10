@@ -23,6 +23,9 @@ const app  = express()
 const PORT = process.env.PORT || 3001
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
+// ── Confiar en proxy de Railway/Heroku para rate-limit e IPs reales ──
+app.set('trust proxy', 1)
+
 // ── Seguridad de cabeceras ─────────────────────────────────────────
 app.use(helmet())
 
