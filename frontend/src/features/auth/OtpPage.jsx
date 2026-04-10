@@ -3,6 +3,7 @@ import { useNavigate, useLocation }    from 'react-router-dom'
 import { useAuth }                     from '../../context/AuthContext'
 import api                             from '../../services/axios.config'
 import { ShieldAlert }                 from 'lucide-react'
+import fondoImg                        from '../../assets/fondo-clinica.jpg'
 
 // ── Logo SC (mismo del login) ─────────────────────────────────────
 const LogoSC = ({ size = 68 }) => (
@@ -309,7 +310,7 @@ export default function OtpPage() {
         justifyContent: 'center',
         position: 'relative',
         overflow: 'hidden',
-        backgroundImage: 'url(/src/assets/fondo-clinica.jpg)',
+        backgroundImage: `url(${fondoImg})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}>
