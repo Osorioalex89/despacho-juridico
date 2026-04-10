@@ -1,18 +1,17 @@
-import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 
-// ── Transporter SMTP Gmail SSL (puerto 465) ───────────────────────
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 587,      // STARTTLS — puerto 465 bloqueado en Railway
-  secure: false,  // false = STARTTLS; true = SSL directo (puerto 465)
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_PASS,
-  },
-  connectionTimeout: 10000,
-  greetingTimeout:   10000,
-  socketTimeout:     15000,
-})
+// ── Cliente Resend (HTTP API — sin SMTP, funciona en Railway) ─────
+const resend = new Resend(process.env.RESEND_API_KEY)
+
+// Sin dominio verificado → usar el dominio de prueba de Resend.
+// Cuando el despacho tenga dominio propio, cambiar a su email real.
+const FROM_EMAIL = process.env.EMAIL_FROM || 'Despacho Jurídico Sánchez Cerino <onboarding@resend.dev>'
+
+// Wrapper que unifica la llamada a Resend
+const transporter = {
+  sendMail: ({ to, subject, html }) =>
+    resend.emails.send({ from: FROM_EMAIL, to, subject, html }),
+}
 
 // ── Plantilla base Legal Premium (Navy/Gold) ───────────────────────
 // Nota: SVG no soportado en Gmail — se usan caracteres Unicode compatibles
