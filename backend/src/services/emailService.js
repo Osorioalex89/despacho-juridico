@@ -1,16 +1,17 @@
-import { Resend } from 'resend'
+import sgMail from '@sendgrid/mail'
 
-// ── Cliente Resend (HTTP API — sin SMTP, funciona en Railway) ─────
-const resend = new Resend(process.env.RESEND_API_KEY)
+// ── Cliente SendGrid (HTTP API — sin SMTP, funciona en Railway) ───
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
-// Sin dominio verificado → usar el dominio de prueba de Resend.
-// Cuando el despacho tenga dominio propio, cambiar a su email real.
-const FROM_EMAIL = process.env.EMAIL_FROM || 'Despacho Jurídico Sánchez Cerino <onboarding@resend.dev>'
+const FROM_EMAIL = {
+  email: process.env.SENDGRID_FROM_EMAIL || 'abogadoadmin89@gmail.com',
+  name:  'Despacho Jurídico Sánchez Cerino',
+}
 
-// Wrapper que unifica la llamada a Resend
+// Wrapper compatible con todas las llamadas existentes a transporter.sendMail
 const transporter = {
   sendMail: ({ to, subject, html }) =>
-    resend.emails.send({ from: FROM_EMAIL, to, subject, html }),
+    sgMail.send({ from: FROM_EMAIL, to, subject, html }),
 }
 
 // ── Plantilla base Legal Premium (Navy/Gold) ───────────────────────
