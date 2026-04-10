@@ -3,13 +3,13 @@ import nodemailer from 'nodemailer'
 // ── Transporter SMTP Gmail SSL (puerto 465) ───────────────────────
 const transporter = nodemailer.createTransport({
   host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  port: 587,      // STARTTLS — puerto 465 bloqueado en Railway
+  secure: false,  // false = STARTTLS; true = SSL directo (puerto 465)
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_PASS,
   },
-  connectionTimeout: 10000,  // 10 s — si Gmail no responde, falla rápido
+  connectionTimeout: 10000,
   greetingTimeout:   10000,
   socketTimeout:     15000,
 })
