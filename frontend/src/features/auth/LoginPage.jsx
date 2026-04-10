@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../services/axios.config'
+import fondoImg from '../../assets/fondo-clinica.jpg'
 
 // ── Logo SVG premium — Monograma SC + Balanza ─────────────────────
 // Archetype: Sovereign / Law firm
@@ -224,7 +225,7 @@ export default function LoginPage() {
         justifyContent: 'center',
         position: 'relative',
         overflow: 'hidden',
-        backgroundImage: 'url(/src/assets/fondo-clinica.jpg)',
+        backgroundImage: `url(${fondoImg})`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}>
