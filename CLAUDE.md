@@ -187,7 +187,7 @@ Creados con `node backend/scripts/crearUsuarios.js` — contraseñas gestionadas
 | `Landig-page/vite.config.js` | Proxy `/api → :3001` · `strictPort:true` |
 
 ### Navegación Landing → App
-- `appLinks.js` — fuente única; cambiar `APP_BASE` al desplegar
+- `appLinks.js` — fuente única; usa `VITE_APP_BASE` (env var) — ya configurado en Vercel con URL de producción
 - Botones usan `window.location.href` (puertos distintos, no react-router)
 - Spinner dorado si navegación tarda >300ms
 
@@ -218,25 +218,46 @@ ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
 
 ## Checklist de Despliegue
 
-### Backend `.env` producción
-- [ ] `DB_*` → producción · `JWT_SECRET` ≥32 chars · `GMAIL_PASS` real · `APP_URL` real
-- [ ] `TURNSTILE_SECRET` prod · `ADMIN_EMAIL` real · `NODE_ENV=production`
-- [ ] `CORS_ORIGIN=https://tudominio.com,https://landing.tudominio.com`
-- [ ] `ANTHROPIC_API_KEY` → opcional; sin key la IA no aparece
+### Plataformas
+- Railway (backend + MySQL): proyecto `compassionate-creativity` — cuenta `abogadoadmin89@gmail.com`
+- Vercel (frontend): cuenta `abogadoadmin89@gmail.com` — proyecto `despacho-juridico`
 
-### Frontend/Landing
-- [ ] `VITE_API_URL=https://api.tudominio.com/api` en `frontend/.env.production`
-- [ ] `VITE_TURNSTILE_SITE_KEY` real (prod) en `frontend/.env.production`
-- [ ] `APP_BASE` en `Landig-page/src/utils/appLinks.js` al dominio real
+### URLs de producción
+- **Backend:** `https://despacho-juridico-production-1df7.up.railway.app`
+- **Frontend:** `https://despacho-juridico-plum.vercel.app`
+- **Landing:** `https://despacho-landing-olive.vercel.app`
 
-### BD y build
+### Backend — Railway ✅ COMPLETO
+- [x] Repo `despacho-juridico` subido a GitHub
+- [x] Servicio `despacho-juridico` desplegado en Railway — Root Directory: `backend/` · Start: `npm start`
+- [x] MySQL agregado y conectado (`mysql.railway.internal`)
+- [x] Todas las variables de entorno configuradas (DB, JWT, Gmail, Anthropic, Turnstile, CORS)
+- [x] Dominio público generado: `despacho-juridico-production-1df7.up.railway.app`
+- [x] SQL migraciones en `app.js` startup (idempotentes): `reporte_ia`, `reporte_ia_at`, `origen`
+- [x] `GMAIL_USER=abogadoadmin89@gmail.com` · `ADMIN_EMAIL=abogadoadmin89@gmail.com`
+
+### Frontend — Vercel ✅ COMPLETO
+- [x] Cuenta Vercel creada con `abogadoadmin89@gmail.com`
+- [x] Proyecto `despacho-juridico` desplegado → Root Directory: `frontend`
+- [x] Variables: `VITE_API_URL` y `VITE_TURNSTILE_SITE_KEY` configuradas
+- [x] URL: `https://despacho-juridico-plum.vercel.app`
+- [x] `frontend/vercel.json` con rewrites SPA — 404 al recargar corregido (2026-04-10)
+- [x] Imágenes de fondo (`fondo-clinica.jpg`) importadas como módulo en `LoginPage` y `RegisterPage` (2026-04-10)
+
+### Landing — Vercel ✅ COMPLETO
+- [x] Proyecto `despacho-landing` desplegado en Vercel — cuenta `abogadoadmin89@gmail.com`
+- [x] URL: `https://despacho-landing-olive.vercel.app`
+- [x] `vercel.json` con rewrites SPA
+- [x] `appLinks.js` usa `VITE_APP_BASE` (env var) — apunta a frontend de producción
+- [x] `Contact.jsx` usa `VITE_API_URL` para fetch al backend
+- [x] Variables configuradas en Vercel: `VITE_APP_BASE` · `VITE_API_URL`
+- [x] `CORS_ORIGIN` en Railway actualizado con URL de landing (2026-04-10)
+
+### BD y otros
 - [x] Tablas `comentarios` y `movimientos` — creadas
-- [x] Campo `origen` en `usuarios` — implementado (SQL pendiente en producción)
-- [ ] `ALTER TABLE casos ADD COLUMN reporte_ia TEXT NULL;` + `reporte_ia_at DATETIME NULL;`
-- [ ] `ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;`
-- [ ] `npm run build` en `frontend/` y `Landig-page/`
-- [ ] CORS configurado para URL de producción
-- [ ] Uploads: ruta pública o S3/Cloudinary (actualmente local)
+- [x] Campo `origen` en `usuarios` — implementado
+- [x] CORS configurado para URLs de producción: frontend + landing
+- [ ] Uploads: actualmente local en Railway (se pierden en redeploy) — migrar a Cloudinary en el futuro
 
 ### Nota IA
 ~$0.002/doc análisis · ~$0.001/caso/día monitoreo. Sin `ANTHROPIC_API_KEY` el sistema funciona igual, botones IA no aparecen.
