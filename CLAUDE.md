@@ -231,10 +231,14 @@ ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
 - [x] Repo `despacho-juridico` subido a GitHub
 - [x] Servicio `despacho-juridico` desplegado en Railway — Root Directory: `backend/` · Start: `npm start`
 - [x] MySQL agregado y conectado (`mysql.railway.internal`)
-- [x] Todas las variables de entorno configuradas (DB, JWT, Gmail, Anthropic, Turnstile, CORS)
+- [x] Todas las variables de entorno configuradas (DB, JWT, Resend, Anthropic, Turnstile, CORS)
 - [x] Dominio público generado: `despacho-juridico-production-1df7.up.railway.app`
 - [x] SQL migraciones en `app.js` startup (idempotentes): `reporte_ia`, `reporte_ia_at`, `origen`
-- [x] `GMAIL_USER=abogadoadmin89@gmail.com` · `ADMIN_EMAIL=abogadoadmin89@gmail.com`
+- [x] `RESEND_API_KEY` configurada · `ADMIN_EMAIL=abogadoadmin89@gmail.com`
+- [x] `trust proxy 1` en `app.js` para rate-limit correcto detrás del proxy Railway (2026-04-10)
+- [x] Email migrado de Gmail SMTP (bloqueado en Railway) → Resend HTTP API (2026-04-10)
+  - FROM temporal: `onboarding@resend.dev` — cambiar a dominio propio cuando lo adquieran
+  - Para dominio propio: verificar en resend.com → agregar `EMAIL_FROM` en Railway variables
 
 ### Frontend — Vercel ✅ COMPLETO
 - [x] Cuenta Vercel creada con `abogadoadmin89@gmail.com`
@@ -242,7 +246,7 @@ ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
 - [x] Variables: `VITE_API_URL` y `VITE_TURNSTILE_SITE_KEY` configuradas
 - [x] URL: `https://despacho-juridico-plum.vercel.app`
 - [x] `frontend/vercel.json` con rewrites SPA — 404 al recargar corregido (2026-04-10)
-- [x] Imágenes de fondo (`fondo-clinica.jpg`) importadas como módulo en `LoginPage` y `RegisterPage` (2026-04-10)
+- [x] Imágenes de fondo (`fondo-clinica.jpg`) importadas como módulo en `LoginPage`, `RegisterPage` y `OtpPage` (2026-04-10)
 
 ### Landing — Vercel ✅ COMPLETO
 - [x] Proyecto `despacho-landing` desplegado en Vercel — cuenta `abogadoadmin89@gmail.com`
