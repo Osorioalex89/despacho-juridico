@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../services/axios.config'
 import { Eye, EyeOff, CheckCircle } from 'lucide-react'
+import fondoImg from '../../assets/fondo-clinica.jpg'
 
 // Clave de sitio Cloudflare Turnstile
 // TEST: '1x00000000000000000000AA' (siempre pasa — reemplazar por la real)
@@ -117,7 +118,7 @@ export default function RegisterPage() {
       <div style={{
         minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
         position:'relative', overflow:'hidden',
-        backgroundImage:'url(/src/assets/fondo-clinica.jpg)',
+        backgroundImage:`url(${fondoImg})`,
         backgroundSize:'cover', backgroundPosition:'center',
       }}>
         <div style={{position:'absolute',inset:0,background:'linear-gradient(135deg,rgba(2,8,24,0.82) 0%,rgba(8,20,48,0.75) 50%,rgba(2,8,24,0.85) 100%)',backdropFilter:'blur(4px)',zIndex:1}}/>
@@ -236,7 +237,7 @@ export default function RegisterPage() {
       <div style={{
         minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center',
         position:'relative', overflow:'hidden',
-        backgroundImage:'url(/src/assets/fondo-clinica.jpg)',
+        backgroundImage:`url(${fondoImg})`,
         backgroundSize:'cover', backgroundPosition:'center',
       }}>
         {/* Overlay */}
