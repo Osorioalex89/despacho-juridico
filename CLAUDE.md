@@ -234,11 +234,12 @@ ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
 - [x] Todas las variables de entorno configuradas (DB, JWT, Resend, Anthropic, Turnstile, CORS)
 - [x] Dominio público generado: `despacho-juridico-production-1df7.up.railway.app`
 - [x] SQL migraciones en `app.js` startup (idempotentes): `reporte_ia`, `reporte_ia_at`, `origen`
-- [x] `RESEND_API_KEY` configurada · `ADMIN_EMAIL=abogadoadmin89@gmail.com`
+- [x] `SENDGRID_API_KEY` configurada · `ADMIN_EMAIL=abogadoadmin89@gmail.com`
 - [x] `trust proxy 1` en `app.js` para rate-limit correcto detrás del proxy Railway (2026-04-10)
-- [x] Email migrado de Gmail SMTP (bloqueado en Railway) → Resend HTTP API (2026-04-10)
-  - FROM temporal: `onboarding@resend.dev` — cambiar a dominio propio cuando lo adquieran
-  - Para dominio propio: verificar en resend.com → agregar `EMAIL_FROM` en Railway variables
+- [x] Email migrado de Gmail SMTP (bloqueado en Railway) → SendGrid HTTP API (2026-04-10)
+  - Sender verificado: `abogadoadmin89@gmail.com` en SendGrid Single Sender Verification
+  - Envía a cualquier destinatario sin necesidad de dominio propio
+  - Para dominio propio: verificar Domain Authentication en SendGrid → agregar `SENDGRID_FROM_EMAIL` en Railway
 
 ### Frontend — Vercel ✅ COMPLETO
 - [x] Cuenta Vercel creada con `abogadoadmin89@gmail.com`
