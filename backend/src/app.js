@@ -71,12 +71,26 @@ app.use((err, req, res, next) => {
   })
 })
 
+// ── Migraciones seguras (idempotentes) ────────────────────────────
+async function runMigrations() {
+  const migrations = [
+    "ALTER TABLE casos ADD COLUMN IF NOT EXISTS reporte_ia TEXT NULL",
+    "ALTER TABLE casos ADD COLUMN IF NOT EXISTS reporte_ia_at DATETIME NULL",
+    "ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS origen VARCHAR(50) NULL DEFAULT NULL",
+  ]
+  for (const q of migrations) {
+    await sequelize.query(q)
+  }
+  console.log('[Migrations] Columnas verificadas.')
+}
+
 // ── Conectar BD e iniciar servidor ────────────────────────────────
 sequelize.authenticate()
   .then(() => {
     console.log('Conexión a MySQL exitosa')
     return sequelize.sync({ alter: false })
   })
+  .then(() => runMigrations())
   .then(() => {
     app.listen(PORT, () => {
       console.log(`Servidor corriendo en http://localhost:${PORT}`)
