@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getCasos, deleteCaso } from './casesService'
+import { useToast, Toast } from '../../components/ui/Toast'
 import {
   Search, Plus, Eye, Pencil, Trash2,
   FolderOpen, X, Scale, AlertTriangle,
@@ -81,6 +82,7 @@ const ESTADO_CHIPS = [
 ]
 
 export default function CasesPage() {
+  const { toast, showToast } = useToast()
   const { canEditCases } = useAuth()
   const navigate = useNavigate()
 
@@ -120,7 +122,7 @@ export default function CasesPage() {
       await deleteCaso(deleteId)
       setDeleteId(null)
       fetchCasos()
-    } catch { alert('Error al eliminar') }
+    } catch { showToast('Error al eliminar') }
   }
 
   // Conteo por estado para las stat cards
@@ -128,6 +130,7 @@ export default function CasesPage() {
 
   return (
     <>
+      <Toast toast={toast} />
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
       <style>{`
         @keyframes fadeUp {

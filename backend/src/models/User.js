@@ -32,7 +32,36 @@ const User = sequelize.define('Usuario', {
   },
   activo: {
     type:         DataTypes.BOOLEAN,
-    defaultValue: true,
+    defaultValue: false,
+  },
+  verification_token: {
+    type:      DataTypes.STRING(64),
+    allowNull: true,
+  },
+  otp_code: {
+    type:      DataTypes.STRING(6),
+    allowNull: true,
+  },
+  otp_expires: {
+    type:      DataTypes.DATE,
+    allowNull: true,
+  },
+  otp_intentos: {
+    type:         DataTypes.TINYINT,
+    defaultValue: 0,
+  },
+  reset_solicitado: {
+    type:         DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  reset_solicitado_at: {
+    type:      DataTypes.DATE,
+    allowNull: true,
+  },
+  origen: {
+    type:         DataTypes.STRING(50),
+    allowNull:    true,
+    defaultValue: null,
   },
 }, {
   tableName:  'usuarios',

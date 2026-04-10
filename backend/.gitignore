@@ -1,0 +1,9 @@
+node_modules/
+.env
+.env.local
+.DS_Store
+dist/
+
+# Archivos subidos por usuarios — no van en el repo
+uploads/*
+!uploads/.gitkeep

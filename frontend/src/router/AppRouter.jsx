@@ -15,9 +15,13 @@ import CaseDetail from '../features/cases/CaseDetail'
 import UsuariosPendientesPage from '../features/users/UsuariosPendientesPage'
 import RegisterPage from '../features/auth/RegisterPage'
 import PendientePage from '../features/auth/PendientePage'
+import OtpPage from '../features/auth/OtpPage'
+import VerificarEmailPage from '../features/auth/VerificarEmailPage'
+import OlvideContrasenaPage from '../features/auth/OlvideContrasenaPage'
 import MisCasosPage from '../features/clientportal/MisCasosPage'
 import DocumentosPage from '../features/documents/DocumentosPage'
 import ClientDetail from '../features/clients/ClientDetail'
+import SolicitudesLandingPage from '../features/landing/SolicitudesLandingPage'
 
 
 
@@ -40,7 +44,7 @@ const Placeholder = ({ title, badge }) => (
 
 function ProtectedRoute({ children, requiredRoles = [] }) {
   const { isAuthenticated, user, loading } = useAuth()
-  if (loading) return null
+  if (loading) return <div style={{minHeight:'100vh',background:'#020818'}}/>
   if (!isAuthenticated) return <Navigate to="/login" replace />
   if (requiredRoles.length > 0 && !requiredRoles.includes(user?.rol)) {
     const roleHome = {
@@ -56,7 +60,7 @@ function ProtectedRoute({ children, requiredRoles = [] }) {
 
 function RootRedirect() {
   const { isAuthenticated, user, loading } = useAuth()
-  if (loading) return null
+  if (loading) return <div style={{minHeight:'100vh',background:'#020818'}}/>
   if (!isAuthenticated) return <Navigate to="/login" replace />
   const destinations = {
     abogado: '/panel/dashboard',
@@ -73,8 +77,11 @@ export default function AppRouter() {
       <Routes>
 
         {/* ── Públicas ── */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/registro" element={<RegisterPage />} />
+        <Route path="/login"               element={<LoginPage />} />
+        <Route path="/registro"            element={<RegisterPage />} />
+        <Route path="/verificar-otp"       element={<OtpPage />} />
+        <Route path="/verificar-email"     element={<VerificarEmailPage />} />
+        <Route path="/olvide-contrasena"   element={<OlvideContrasenaPage />} />
 
         {/* ── Usuario pendiente de aprobación ── */}
         <Route path="/pendiente" element={
@@ -149,6 +156,11 @@ export default function AppRouter() {
         <Route path="/panel/documentos" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
             <PanelLayout><DocumentosPage /></PanelLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/panel/solicitudes-landing" element={
+          <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
+            <PanelLayout><SolicitudesLandingPage /></PanelLayout>
           </ProtectedRoute>
         } />
 

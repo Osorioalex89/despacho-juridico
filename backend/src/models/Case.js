@@ -70,6 +70,14 @@ const Case = sequelize.define('Caso', {
     type:      DataTypes.TEXT,
     allowNull: true,
   },
+  reporte_ia: {
+    type:      DataTypes.TEXT,
+    allowNull: true,
+  },
+  reporte_ia_at: {
+    type:      DataTypes.DATE,
+    allowNull: true,
+  },
 }, {
   tableName:  'casos',
   timestamps: true,

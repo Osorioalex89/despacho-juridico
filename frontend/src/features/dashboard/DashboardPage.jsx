@@ -1,26 +1,21 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
+import { getCasos }    from '../cases/casesService'
+import { getClientes } from '../clients/clientsService'
+import { getCitas }    from '../appointments/appointmentsService'
+import api             from '../../services/axios.config'
+import { Scale, CalendarDays, Users } from 'lucide-react'
 
-// ── Datos mock realistas ─────────────────────────────────────────
-const mockData = {
-  casosActivos: 14,
-  totalCitas: 4,
-  totalClientes: 31,
-  pendientes: 2,
-  casosRecientes: [
-    { id: 1, folio: 'EXP-2025-047', titulo: 'Homicidio culposo — Acevedo',      cliente: 'Juan González Acevedo',  estado: 'urgente',     fecha: '08 ene 2025' },
-    { id: 2, folio: 'EXP-2025-091', titulo: 'Demanda laboral por despido',       cliente: 'Constructora HM S.A.',   estado: 'activo',      fecha: '14 ene 2025' },
-    { id: 3, folio: 'EXP-2025-112', titulo: 'Amparo contra resolución fiscal',   cliente: 'Ana Martínez Gutiérrez', estado: 'en_revision', fecha: '20 ene 2025' },
-    { id: 4, folio: 'EXP-2025-134', titulo: 'Herencia y adjudicación de bienes', cliente: 'Sucesión Ramírez Peña',  estado: 'pendiente',   fecha: '03 feb 2025' },
-    { id: 5, folio: 'EXP-2025-158', titulo: 'Compraventa de predio ejidal',      cliente: 'Luis R. Torres Vera',    estado: 'activo',      fecha: '10 feb 2025' },
-  ],
-  citasHoy: [
-    { id: 1, hora: '9:00',  periodo: 'am', cliente: 'Juan González Acevedo',  motivo: 'Revisión de expediente penal', estado: 'confirmada' },
-    { id: 2, hora: '11:00', periodo: 'am', cliente: 'Ana Martínez Gutiérrez', motivo: 'Firma de poder notarial',      estado: 'pendiente'  },
-    { id: 3, hora: '3:00',  periodo: 'pm', cliente: 'Luis R. Torres Vera',    motivo: 'Consulta sobre escrituración', estado: 'confirmada' },
-    { id: 4, hora: '5:00',  periodo: 'pm', cliente: 'Sucesión Ramírez Peña',  motivo: 'Avance de trámite sucesorio',  estado: 'pendiente'  },
-  ],
+const toLocalStr = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+
+function parseHora(horaStr) {
+  if (!horaStr) return { hora: '--', periodo: '' }
+  const [h, m] = horaStr.split(':').map(Number)
+  const periodo = h < 12 ? 'am' : 'pm'
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h
+  return { hora: m === 0 ? `${h12}:00` : `${h12}:${String(m).padStart(2,'0')}`, periodo }
 }
 
 const ESTADO = {
@@ -55,107 +50,106 @@ function Badge({ estado, config }) {
   )
 }
 
-// ── SVG Icons premium (diseñados para despacho jurídico) ──────────
-
-// Balanza de la Justicia — card de Casos
-const IconBalanza = () => (
-  <svg viewBox="0 0 40 40" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="goldGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#E8C97A"/>
-        <stop offset="100%" stopColor="#9A7A32"/>
-      </linearGradient>
-    </defs>
-    {/* Base */}
-    <rect x="15" y="33" width="10" height="2" rx="1" fill="url(#goldGrad1)" opacity="0.9"/>
-    <rect x="19" y="27" width="2" height="6" rx="1" fill="url(#goldGrad1)" opacity="0.9"/>
-    {/* Eje horizontal */}
-    <rect x="6" y="14" width="28" height="1.8" rx="0.9" fill="url(#goldGrad1)" opacity="0.85"/>
-    {/* Poste vertical */}
-    <rect x="19" y="7" width="2" height="8" rx="1" fill="url(#goldGrad1)" opacity="0.9"/>
-    {/* Pivote top */}
-    <circle cx="20" cy="7" r="2" fill="url(#goldGrad1)"/>
-    {/* Cadenas izq */}
-    <line x1="10" y1="15" x2="8" y2="22" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.75"/>
-    <line x1="10" y1="15" x2="12" y2="22" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.75"/>
-    {/* Platillo izq */}
-    <ellipse cx="10" cy="23" rx="5" ry="1.8" fill="url(#goldGrad1)" opacity="0.8"/>
-    {/* Cadenas der */}
-    <line x1="30" y1="15" x2="28" y2="22" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.75"/>
-    <line x1="30" y1="15" x2="32" y2="22" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.75"/>
-    {/* Platillo der */}
-    <ellipse cx="30" cy="23" rx="5" ry="1.8" fill="url(#goldGrad1)" opacity="0.8"/>
-  </svg>
-)
-
-// Calendario Legal — card de Citas
-const IconCalendario = () => (
-  <svg viewBox="0 0 40 40" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="blueGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#93BBFC"/>
-        <stop offset="100%" stopColor="#3B82F6"/>
-      </linearGradient>
-    </defs>
-    {/* Cuerpo calendario */}
-    <rect x="6" y="10" width="28" height="24" rx="4" fill="url(#blueGrad1)" opacity="0.15" stroke="url(#blueGrad1)" strokeWidth="1.5" strokeOpacity="0.6"/>
-    {/* Cabecera */}
-    <rect x="6" y="10" width="28" height="8" rx="4" fill="url(#blueGrad1)" opacity="0.25"/>
-    <rect x="6" y="14" width="28" height="4" fill="url(#blueGrad1)" opacity="0.1"/>
-    {/* Argollas */}
-    <rect x="13" y="7" width="2.5" height="6" rx="1.25" fill="#93BBFC" opacity="0.8"/>
-    <rect x="24.5" y="7" width="2.5" height="6" rx="1.25" fill="#93BBFC" opacity="0.8"/>
-    {/* Puntos de días */}
-    {[
-      [11,23],[16,23],[21,23],[26,23],
-      [11,29],[16,29],[21,29],
-    ].map(([cx,cy],i) => (
-      <circle key={i} cx={cx} cy={cy} r="1.8"
-        fill={i === 0 ? '#93BBFC' : 'rgba(147,187,252,0.35)'}
-        stroke={i === 0 ? '#3B82F6' : 'none'}
-        strokeWidth="0.8"
-      />
-    ))}
-    {/* Línea de mes */}
-    <text x="20" y="17" textAnchor="middle"
-      fontFamily="Inter, sans-serif" fontSize="5" fontWeight="700"
-      fill="#93BBFC" opacity="0.9" letterSpacing="1">
-      HOY
-    </text>
-  </svg>
-)
-
-// Silueta Cliente con insignia legal — card de Clientes
-const IconCliente = () => (
-  <svg viewBox="0 0 40 40" width="36" height="36" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="greenGrad1" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#86EFAC"/>
-        <stop offset="100%" stopColor="#16A34A"/>
-      </linearGradient>
-    </defs>
-    {/* Torso */}
-    <path d="M8 34 C8 26 12 23 20 23 C28 23 32 26 32 34"
-      stroke="url(#greenGrad1)" strokeWidth="1.8" strokeOpacity="0.7"
-      fill="rgba(34,197,94,0.08)" strokeLinecap="round"/>
-    {/* Cabeza */}
-    <circle cx="20" cy="16" r="6.5"
-      fill="rgba(34,197,94,0.1)"
-      stroke="url(#greenGrad1)" strokeWidth="1.6" strokeOpacity="0.75"/>
-    {/* Insignia en el torso — estrella de 6 puntas pequeña */}
-    <path d="M20 27 L20.8 29.4 L23.4 29.4 L21.3 30.9 L22.1 33.3 L20 31.8 L17.9 33.3 L18.7 30.9 L16.6 29.4 L19.2 29.4 Z"
-      fill="rgba(34,197,94,0.5)" stroke="#86EFAC" strokeWidth="0.5" strokeOpacity="0.6"/>
-  </svg>
-)
+// ── Colores de iconos para tarjetas (navy bg + gold icon) ─────────
+const CARD_ICON_STYLE = {
+  wrapper: {
+    width: '48px', height: '48px', borderRadius: '12px',
+    background: 'rgba(8,20,48,0.55)',
+    border: '1px solid rgba(197,160,89,0.22)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  color: '#c5a059',
+}
 
 export default function DashboardPage() {
   const { user }  = useAuth()
   const navigate  = useNavigate()
   const [visible, setVisible] = useState(false)
 
+  const [stats, setStats] = useState({
+    casosActivos:  0,
+    totalClientes: 0,
+    citasHoyCount: 0,
+    pendientes:    0,
+  })
+  const [casosRecientes, setCasosRecientes] = useState([])
+  const [citasHoy,       setCitasHoy]       = useState([])
+  const [proximaCita,    setProximaCita]     = useState(null)
+  const [loading,        setLoading]         = useState(true)
+
   useEffect(() => {
     const t = setTimeout(() => setVisible(true), 80)
     return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    const hoy = toLocalStr(new Date())
+
+    Promise.allSettled([
+      api.get('/stats/dashboard'),
+      getCasos({ limit: 1000 }),
+      getClientes({ limit: 1000 }),
+      getCitas({ limit: 1000 }),
+    ]).then(([rStats, rCasos, rClientes, rCitas]) => {
+      const statsData = rStats.status === 'fulfilled' ? rStats.value.data : {}
+      const casos    = rCasos.status    === 'fulfilled' ? (rCasos.value.data.casos       || []) : []
+      const clientes = rClientes.status === 'fulfilled' ? (rClientes.value.data.clientes || []) : []
+      const citas    = rCitas.status    === 'fulfilled' ? (rCitas.value.data.citas       || []) : []
+
+      // Mapa id → nombre de cliente
+      const clienteMap = {}
+      clientes.forEach(c => { clienteMap[c.id_cliente] = c.nombre })
+
+      // Métricas — conteos exactos desde /api/stats/dashboard
+      const casosActivos = statsData.casosActivos  ?? casos.filter(c => c.estado !== 'cerrado').length
+      const pendientes   = statsData.pendientes    ?? 0
+
+      // Citas de hoy
+      const citasDeHoy = citas
+        .filter(c => c.fecha === hoy)
+        .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))
+        .map(c => {
+          const { hora, periodo } = parseHora(c.hora)
+          return {
+            id:      c.id_cita,
+            hora,
+            periodo,
+            cliente: clienteMap[c.id_cliente] || c.nombre_cliente || 'Cliente',
+            motivo:  c.motivo || '—',
+            estado:  c.estado,
+          }
+        })
+
+      // Próxima cita de hoy
+      const ahora = new Date()
+      const horaActual = `${String(ahora.getHours()).padStart(2,'0')}:${String(ahora.getMinutes()).padStart(2,'0')}`
+      const proxima = citas
+        .filter(c => c.fecha === hoy && (c.hora || '') >= horaActual && c.estado !== 'cancelada')
+        .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''))[0]
+
+      // Casos recientes — últimos 5
+      const recientes = [...casos]
+        .sort((a, b) => new Date(b.fecha_apertura || 0) - new Date(a.fecha_apertura || 0))
+        .slice(0, 5)
+        .map(c => ({
+          id:      c.id_caso,
+          folio:   c.folio,
+          titulo:  c.asunto,
+          cliente: clienteMap[c.id_cliente] || '—',
+          estado:  c.estado,
+        }))
+
+      setStats({
+        casosActivos,
+        totalClientes: statsData.totalClientes ?? clientes.length,
+        citasHoyCount: statsData.citasHoy      ?? citasDeHoy.length,
+        pendientes,
+      })
+      setCasosRecientes(recientes)
+      setCitasHoy(citasDeHoy)
+      setProximaCita(proxima || null)
+      setLoading(false)
+    })
   }, [])
 
   const getGreeting = () => {
@@ -344,13 +338,8 @@ export default function DashboardPage() {
                  onClick={() => navigate('/panel/casos')}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'18px' }}>
                 <p className="card-eyebrow">Casos activos</p>
-                {/* SVG Balanza premium */}
-                <div style={{
-                  width:'48px', height:'48px', borderRadius:'12px',
-                  background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.18)',
-                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-                }}>
-                  <IconBalanza/>
+                <div style={CARD_ICON_STYLE.wrapper}>
+                  <Scale size={22} color={CARD_ICON_STYLE.color} strokeWidth={1.6}/>
                 </div>
               </div>
               {/* Número en Inter extra-bold */}
@@ -358,12 +347,12 @@ export default function DashboardPage() {
                 fontFamily:"'Inter',sans-serif", fontSize:'48px', fontWeight:'800',
                 color:'rgba(255,255,255,0.96)', margin:'0 0 7px', lineHeight:1,
                 letterSpacing:'-1px',
-              }}>14</p>
+              }}>{loading ? '—' : stats.casosActivos}</p>
               <p style={{
                 fontFamily:"'Inter',sans-serif", fontSize:'12px', fontWeight:'500',
                 color:'rgba(201,168,76,0.72)', margin:0,
               }}>
-                +2 expedientes este mes
+                Casos sin cerrar
               </p>
             </div>
 
@@ -372,24 +361,22 @@ export default function DashboardPage() {
                  onClick={() => navigate('/panel/agenda')}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'18px' }}>
                 <p className="card-eyebrow card-eyebrow-blue">Citas hoy</p>
-                <div style={{
-                  width:'48px', height:'48px', borderRadius:'12px',
-                  background:'rgba(59,130,246,0.08)', border:'1px solid rgba(59,130,246,0.2)',
-                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-                }}>
-                  <IconCalendario/>
+                <div style={CARD_ICON_STYLE.wrapper}>
+                  <CalendarDays size={22} color={CARD_ICON_STYLE.color} strokeWidth={1.6}/>
                 </div>
               </div>
               <p style={{
                 fontFamily:"'Inter',sans-serif", fontSize:'48px', fontWeight:'800',
                 color:'rgba(255,255,255,0.96)', margin:'0 0 7px', lineHeight:1,
                 letterSpacing:'-1px',
-              }}>{mockData.totalCitas}</p>
+              }}>{loading ? '—' : stats.citasHoyCount}</p>
               <p style={{
                 fontFamily:"'Inter',sans-serif", fontSize:'12px', fontWeight:'500',
                 color:'rgba(147,187,252,0.72)', margin:0,
               }}>
-                Próxima: 9:00 am · Juan González
+                {proximaCita
+                  ? `Próxima: ${parseHora(proximaCita.hora).hora} ${parseHora(proximaCita.hora).periodo}`
+                  : 'Sin citas pendientes hoy'}
               </p>
             </div>
 
@@ -398,32 +385,28 @@ export default function DashboardPage() {
                  onClick={() => navigate('/panel/clientes')}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:'18px' }}>
                 <p className="card-eyebrow card-eyebrow-green">Clientes</p>
-                <div style={{
-                  width:'48px', height:'48px', borderRadius:'12px',
-                  background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.2)',
-                  display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0,
-                }}>
-                  <IconCliente/>
+                <div style={CARD_ICON_STYLE.wrapper}>
+                  <Users size={22} color={CARD_ICON_STYLE.color} strokeWidth={1.6}/>
                 </div>
               </div>
               <p style={{
                 fontFamily:"'Inter',sans-serif", fontSize:'48px', fontWeight:'800',
                 color:'rgba(255,255,255,0.96)', margin:'0 0 7px', lineHeight:1,
                 letterSpacing:'-1px',
-              }}>{mockData.totalClientes}</p>
-              {mockData.pendientes > 0 ? (
+              }}>{loading ? '—' : stats.totalClientes}</p>
+              {stats.pendientes > 0 ? (
                 <p style={{
                   fontFamily:"'Inter',sans-serif", fontSize:'12px', fontWeight:'500',
                   color:'rgba(252,211,77,0.80)', margin:0,
                 }}>
-                  ⚠ {mockData.pendientes} pendiente{mockData.pendientes > 1 ? 's' : ''} de aprobación
+                  ⚠ {stats.pendientes} pendiente{stats.pendientes > 1 ? 's' : ''} de aprobación
                 </p>
               ) : (
                 <p style={{
                   fontFamily:"'Inter',sans-serif", fontSize:'12px', fontWeight:'500',
                   color:'rgba(134,239,172,0.72)', margin:0,
                 }}>
-                  +3 nuevos esta semana
+                  Total de clientes registrados
                 </p>
               )}
             </div>
@@ -467,7 +450,12 @@ export default function DashboardPage() {
                 ))}
               </div>
 
-              {mockData.casosRecientes.map(caso => (
+              {casosRecientes.length === 0 && !loading && (
+                <p style={{fontFamily:"'Inter',sans-serif",fontSize:'13px',color:'rgba(255,255,255,0.3)',padding:'20px 24px',margin:0}}>
+                  Sin casos registrados
+                </p>
+              )}
+              {casosRecientes.map(caso => (
                 <div key={caso.id} className="table-row-dash"
                   style={{ gridTemplateColumns:'96px 1fr 104px' }}
                   onClick={() => navigate(`/panel/casos/${caso.id}`)}>
@@ -517,7 +505,12 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              {mockData.citasHoy.map((cita) => {
+              {citasHoy.length === 0 && !loading && (
+                <p style={{fontFamily:"'Inter',sans-serif",fontSize:'13px',color:'rgba(255,255,255,0.3)',padding:'20px 24px',margin:0}}>
+                  Sin citas para hoy
+                </p>
+              )}
+              {citasHoy.map((cita) => {
                 const cfg = CITA_ESTADO[cita.estado] || CITA_ESTADO.pendiente
                 return (
                   <div key={cita.id} className="cita-row">
@@ -574,10 +567,10 @@ export default function DashboardPage() {
                   fontFamily:"'Inter',sans-serif", fontSize:'11px', fontWeight:'400',
                   color:'rgba(255,255,255,0.28)', margin:0,
                 }}>
-                  {mockData.totalCitas} citas · {new Date().toLocaleDateString('es-MX', { day:'numeric', month:'short' })}
+                  {stats.citasHoyCount} citas · {new Date().toLocaleDateString('es-MX', { day:'numeric', month:'short' })}
                 </p>
                 <div style={{ display:'flex', gap:'5px', alignItems:'center' }}>
-                  {mockData.citasHoy.map(c => (
+                  {citasHoy.map(c => (
                     <div key={c.id} style={{
                       width:'6px', height:'6px', borderRadius:'50%',
                       background: CITA_ESTADO[c.estado]?.dot || '#6B7280',

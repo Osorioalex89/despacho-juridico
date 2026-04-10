@@ -2,7 +2,10 @@ import { Router }                   from 'express'
 import { verifyToken, requireRole } from '../middlewares/auth.middleware.js'
 import {
   getCasos, getCasoById,
-  createCaso, updateCaso, deleteCaso
+  createCaso, updateCaso, deleteCaso,
+  addComentario, getCasoTimeline,
+  getMovimientos, addMovimiento,
+  chatCaso,
 } from '../controllers/cases.controller.js'
 
 const router = Router()
@@ -27,14 +30,20 @@ router.get('/mis-casos', requireRole('cliente'), async (req, res) => {
 
     res.json({ casos, cliente })
   } catch (error) {
-    console.error(error)
+    console.error('Error al obtener mis-casos:', error.message)
     res.status(500).json({ message: 'Error interno del servidor' })
   }
 })
 
-router.get('/:id',  requireRole('abogado', 'secretario'), getCasoById)
-router.post('/',    requireRole('abogado'),                createCaso)
-router.put('/:id',  requireRole('abogado'),                updateCaso)
-router.delete('/:id', requireRole('abogado'),             deleteCaso)
+router.get('/:id/timeline',      requireRole('abogado', 'secretario'),           getCasoTimeline)
+router.get('/:id/movimientos',   requireRole('abogado', 'secretario', 'cliente'), getMovimientos)
+router.post('/:id/movimientos',  requireRole('abogado', 'secretario'),            addMovimiento)
+router.get('/:id',               requireRole('abogado', 'secretario'),            getCasoById)
+router.post('/',                 requireRole('abogado'),                createCaso)
+router.put('/:id',               requireRole('abogado'),                updateCaso)
+router.delete('/:id',            requireRole('abogado'),                deleteCaso)
+// Comentarios — disponible para abogado y secretario
+router.post('/:id/comentarios',  requireRole('abogado', 'secretario'),  addComentario)
+router.post('/:id/chat',         requireRole('abogado', 'secretario', 'cliente'), chatCaso)
 
 export default router

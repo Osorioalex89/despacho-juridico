@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { LogOut, Phone, Mail, MapPin, Clock, Check, Lock, Shield, MessageCircle, ChevronRight } from 'lucide-react'
+import {
+  LogOut, Phone, Mail, MapPin, Check, Lock, Shield, ChevronRight,
+  Scale, FileText, Landmark, BookOpen, FileSignature, Home, Briefcase, Gavel,
+} from 'lucide-react'
 
 // ── Logo SC ───────────────────────────────────────────────────────
 const LogoSC = ({ size = 40 }) => (
@@ -36,15 +39,42 @@ const LogoSC = ({ size = 40 }) => (
 
 // ── Servicios ─────────────────────────────────────────────────────
 const SERVICIOS = [
-  { icon:'⚖️', titulo:'Asuntos Penales',        desc:'Defensa y representación en procesos penales del fuero común y federal.',  req:'Acta de hechos, identificación oficial y denuncia previa.' },
-  { icon:'📋', titulo:'Asuntos Civiles',         desc:'Contratos, demandas civiles, daños y perjuicios, obligaciones.',           req:'Contrato o documento origen del conflicto e identificación.' },
-  { icon:'🏛️', titulo:'Amparos',                desc:'Amparo directo e indirecto contra actos de autoridad.',                    req:'Resolución impugnada y datos del juicio de origen.' },
-  { icon:'📜', titulo:'Sucesorios',              desc:'Testamentos, herencias, adjudicación de bienes.',                          req:'Acta de defunción, testamento (si existe) e IDs de herederos.' },
-  { icon:'🤝', titulo:'Contratos',               desc:'Elaboración, revisión y asesoría en contratos civiles y mercantiles.',     req:'Partes involucradas, objeto del contrato y condiciones.' },
-  { icon:'🏠', titulo:'Trámite de Escrituras',   desc:'Escrituración de inmuebles, regularización y trámites notariales.',        req:'Escritura anterior, plano catastral e identificaciones.' },
-  { icon:'📌', titulo:'Inscripción de Posesión', desc:'Registro y trámites de posesión de terrenos y propiedades ejidales.',     req:'Título de posesión, plano y constancia ejidal.' },
-  { icon:'💼', titulo:'Asesoría Legal',           desc:'Consultas y orientación jurídica en todas las ramas del derecho.',        req:'Descripción del caso y documentos relacionados.' },
+  { Icon: Gavel,         color:'#C9A84C', bg:'rgba(201,168,76,0.12)',  titulo:'Asuntos Penales',        desc:'Defensa y representación en procesos penales del fuero común y federal.',  req:'Acta de hechos, identificación oficial y denuncia previa.' },
+  { Icon: FileText,      color:'#93BBFC', bg:'rgba(147,187,252,0.12)', titulo:'Asuntos Civiles',         desc:'Contratos, demandas civiles, daños y perjuicios, obligaciones.',           req:'Contrato o documento origen del conflicto e identificación.' },
+  { Icon: Landmark,      color:'#C4B5FD', bg:'rgba(196,181,253,0.12)', titulo:'Amparos',                 desc:'Amparo directo e indirecto contra actos de autoridad.',                    req:'Resolución impugnada y datos del juicio de origen.' },
+  { Icon: BookOpen,      color:'#FB923C', bg:'rgba(251,146,60,0.12)',  titulo:'Sucesorios',              desc:'Testamentos, herencias, adjudicación de bienes.',                          req:'Acta de defunción, testamento (si existe) e IDs de herederos.' },
+  { Icon: FileSignature, color:'#86EFAC', bg:'rgba(134,239,172,0.12)', titulo:'Contratos',               desc:'Elaboración, revisión y asesoría en contratos civiles y mercantiles.',     req:'Partes involucradas, objeto del contrato y condiciones.' },
+  { Icon: Home,          color:'#FCD34D', bg:'rgba(252,211,77,0.12)',  titulo:'Trámite de Escrituras',   desc:'Escrituración de inmuebles, regularización y trámites notariales.',        req:'Escritura anterior, plano catastral e identificaciones.' },
+  { Icon: Scale,         color:'#FCA5A5', bg:'rgba(252,165,165,0.12)', titulo:'Inscripción de Posesión', desc:'Registro y trámites de posesión de terrenos y propiedades ejidales.',     req:'Título de posesión, plano y constancia ejidal.' },
+  { Icon: Briefcase,     color:'#E8C97A', bg:'rgba(232,201,122,0.12)', titulo:'Asesoría Legal',           desc:'Consultas y orientación jurídica en todas las ramas del derecho.',        req:'Descripción del caso y documentos relacionados.' },
 ]
+
+// ── Ícono 3D ──────────────────────────────────────────────────────
+function Icon3D({ Icon, color, bg, hovered }) {
+  return (
+    <div style={{
+      width:'52px', height:'52px', borderRadius:'14px', flexShrink:0,
+      display:'flex', alignItems:'center', justifyContent:'center',
+      marginBottom:'14px',
+      background: hovered
+        ? `linear-gradient(145deg, ${bg.replace('0.12','0.22')}, ${bg})`
+        : `linear-gradient(145deg, ${bg}, rgba(8,20,48,0.4))`,
+      border:`1px solid ${color}33`,
+      boxShadow: hovered
+        ? `0 8px 20px ${color}30, 0 2px 6px rgba(0,0,0,0.5), inset 0 1px 0 ${color}22`
+        : `0 4px 12px rgba(0,0,0,0.45), 0 1px 3px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.07)`,
+      transform: hovered ? 'translateY(-2px) scale(1.07)' : 'translateY(0) scale(1)',
+      transition:'all 0.25s ease',
+    }}>
+      <Icon size={22} style={{
+        color,
+        filter: `drop-shadow(0 2px 4px ${color}55)`,
+        transition:'all 0.25s ease',
+        transform: hovered ? 'scale(1.1)' : 'scale(1)',
+      }}/>
+    </div>
+  )
+}
 
 // ── Pasos del stepper ─────────────────────────────────────────────
 const STEPS = [
@@ -77,12 +107,12 @@ function ServiceCard({ s, idx }) {
         <div style={{
           position:'absolute', top:-30, right:-30,
           width:80, height:80, borderRadius:'50%',
-          background:'rgba(201,168,76,0.12)',
+          background:`${s.color}1a`,
           pointerEvents:'none',
         }}/>
       )}
 
-      <div style={{fontSize:'26px',marginBottom:'11px'}}>{s.icon}</div>
+      <Icon3D Icon={s.Icon} color={s.color} bg={s.bg} hovered={hovered}/>
       <h3 style={{
         fontFamily:"'Playfair Display',serif",
         fontSize:'14.5px', fontWeight:'700',
@@ -189,6 +219,43 @@ export default function PendientePage() {
           color:rgba(201,168,76,0.9);
           transform:translateY(-1px);
         }
+
+        /* ── Responsive ─────────────────────────────────── */
+        @media (max-width: 767px) {
+          .pp-nav-inner {
+            padding: 0 16px !important;
+            height: 56px !important;
+          }
+          .pp-brand-subtitle { display: none; }
+          .pp-hero { padding: 32px 16px 16px !important; }
+          .pp-hero h1 { font-size: 22px !important; }
+          .pp-hero-desc { font-size: 13px !important; }
+
+          .pp-stepper {
+            gap: 0 !important;
+          }
+          .pp-step-line {
+            width: 36px !important;
+          }
+          .pp-step-label { font-size: 9px !important; }
+
+          .pp-services-grid {
+            grid-template-columns: 1fr 1fr !important;
+            gap: 10px !important;
+          }
+          .pp-section { padding: 0 16px 40px !important; }
+          .pp-seal { margin: 0 16px 32px !important; }
+          .pp-footer-inner { gap: 14px !important; }
+        }
+
+        @media (max-width: 480px) {
+          .pp-services-grid {
+            grid-template-columns: 1fr !important;
+          }
+          .pp-hero h1 { font-size: 20px !important; }
+          .pp-stepper { flex-wrap: nowrap; }
+          .pp-step-line { width: 24px !important; }
+        }
       `}</style>
 
       <div style={{
@@ -209,14 +276,14 @@ export default function PendientePage() {
           position:'sticky', top:0, zIndex:100,
           boxShadow:'0 4px 20px rgba(0,0,0,0.3)',
         }}>
-          <div style={{maxWidth:'1200px',margin:'0 auto',padding:'0 32px',height:'64px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+          <div className="pp-nav-inner" style={{maxWidth:'1200px',margin:'0 auto',padding:'0 32px',height:'64px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
               <LogoSC size={38}/>
               <div>
                 <p style={{fontFamily:"'Playfair Display',serif",fontSize:'14px',fontWeight:'700',color:'rgba(255,255,255,0.97)',margin:'0 0 1px',textShadow:'0 1px 4px rgba(0,0,0,0.3)'}}>
                   Lic. Horacio <span style={{color:'#C9A84C'}}>Sánchez Cerino</span>
                 </p>
-                <p style={{fontFamily:"'Inter',sans-serif",fontSize:'9px',fontWeight:'700',color:'rgba(201,168,76,0.55)',margin:0,letterSpacing:'2.2px',textTransform:'uppercase'}}>
+                <p className="pp-brand-subtitle" style={{fontFamily:"'Inter',sans-serif",fontSize:'9px',fontWeight:'700',color:'rgba(201,168,76,0.55)',margin:0,letterSpacing:'2.2px',textTransform:'uppercase'}}>
                   Asesoría Jurídica Profesional
                 </p>
               </div>
@@ -233,10 +300,10 @@ export default function PendientePage() {
         </nav>
 
         {/* ── Hero ───────────────────────────────────────────── */}
-        <div style={{maxWidth:'720px',margin:'0 auto',padding:'52px 24px 20px',textAlign:'center'}}>
+        <div className="pp-hero" style={{maxWidth:'720px',margin:'0 auto',padding:'52px 24px 20px',textAlign:'center'}}>
 
           {/* ── Timeline Stepper ─────────────────────────────── */}
-          <div className="pp-fade" style={{
+          <div className="pp-fade pp-stepper" style={{
             display:'flex', alignItems:'center', justifyContent:'center',
             marginBottom:'44px', gap:0,
             animationDelay:'0.05s',
@@ -274,7 +341,7 @@ export default function PendientePage() {
                       {isLocked && <Lock size={11} style={{color:'rgba(255,255,255,0.25)'}}/>}
                     </div>
                     {/* Label */}
-                    <span style={{
+                    <span className="pp-step-label" style={{
                       fontFamily:"'Inter',sans-serif",
                       fontSize:'10px', fontWeight: isDone||isActive ? '600' : '400',
                       color: isDone
@@ -290,7 +357,7 @@ export default function PendientePage() {
 
                   {/* Línea conectora */}
                   {i < STEPS.length - 1 && (
-                    <div style={{
+                    <div className="pp-step-line" style={{
                       width:'80px', height:'1px', margin:'0 10px',
                       marginBottom:'22px',
                       background: i === 0
@@ -323,7 +390,7 @@ export default function PendientePage() {
             Su seguridad es nuestra prioridad
           </h1>
 
-          <p className="pp-fade" style={{
+          <p className="pp-fade pp-hero-desc" style={{
             fontFamily:"'Inter',sans-serif", fontSize:'14px',
             color:'rgba(255,255,255,0.45)', lineHeight:1.8,
             margin:'0 0 28px', maxWidth:'560px', marginLeft:'auto', marginRight:'auto',
@@ -352,7 +419,7 @@ export default function PendientePage() {
           {/* Botón contacto */}
           <div className="pp-fade" style={{marginBottom:'52px',animationDelay:'0.26s'}}>
             <br/>
-            <a href="tel:9131004413" className="pp-contact-btn">
+            <a href="tel:+529131004413" className="pp-contact-btn">
               <Phone size={14}/>
               ¿Duda urgente? Contactar al despacho
             </a>
@@ -360,7 +427,7 @@ export default function PendientePage() {
         </div>
 
         {/* ── Exploración Preventiva ─────────────────────────── */}
-        <div style={{maxWidth:'1100px',margin:'0 auto',padding:'0 24px 52px'}}>
+        <div className="pp-section" style={{maxWidth:'1100px',margin:'0 auto',padding:'0 24px 52px'}}>
 
           <div className="pp-fade" style={{textAlign:'center',marginBottom:'32px',animationDelay:'0.28s'}}>
             <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'3px',textTransform:'uppercase',color:'rgba(201,168,76,0.6)',margin:'0 0 10px'}}>
@@ -375,7 +442,7 @@ export default function PendientePage() {
             <div style={{width:'40px',height:'2px',margin:'0 auto',background:'linear-gradient(90deg,transparent,#C9A84C,transparent)',borderRadius:'2px'}}/>
           </div>
 
-          <div style={{
+          <div className="pp-services-grid" style={{
             display:'grid',
             gridTemplateColumns:'repeat(auto-fit,minmax(230px,1fr))',
             gap:'13px',
@@ -387,7 +454,7 @@ export default function PendientePage() {
         </div>
 
         {/* ── Sello de garantía ──────────────────────────────── */}
-        <div style={{maxWidth:'600px',margin:'0 auto 40px',padding:'0 24px'}}>
+        <div className="pp-seal" style={{maxWidth:'600px',margin:'0 auto 40px',padding:'0 24px'}}>
           <div className="pp-fade" style={{
             background:'rgba(8,20,48,0.75)',
             backdropFilter:'blur(16px)',
@@ -428,9 +495,9 @@ export default function PendientePage() {
 
         {/* ── Footer contacto ────────────────────────────────── */}
         <div style={{borderTop:'1px solid rgba(255,255,255,0.05)',background:'rgba(4,12,32,0.6)',padding:'24px'}}>
-          <div style={{maxWidth:'800px',margin:'0 auto',display:'flex',flexWrap:'wrap',justifyContent:'center',gap:'24px'}}>
+          <div className="pp-footer-inner" style={{maxWidth:'800px',margin:'0 auto',display:'flex',flexWrap:'wrap',justifyContent:'center',gap:'24px'}}>
             {[
-              {icon:Phone,  text:'913-100-44-13'                  },
+              {icon:Phone,  text:'+52 913 100 4413'                },
               {icon:Mail,   text:'horaciocerino23@gmail.com'      },
               {icon:MapPin, text:'Francisco Javier Mina #25, Centla, Tabasco'},
             ].map(({icon:Icon,text})=>(

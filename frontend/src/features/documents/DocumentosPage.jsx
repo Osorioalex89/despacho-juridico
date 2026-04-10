@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth }       from '../../context/AuthContext'
+import { useToast, Toast } from '../../components/ui/Toast'
 import { getCasos }      from '../cases/casesService'
 import { getClientes }   from '../clients/clientsService'
-import { getDocumentos, uploadDocumento, deleteDocumento } from './documentsService'
+import { getDocumentos, uploadDocumento, deleteDocumento, analizarDocumentoIA, toggleBloqueoDoc } from './documentsService'
 import {
   Upload, Trash2, Download, FileText,
   File, Image, FileBadge, Search, FolderOpen, User,
-  Lock, Unlock
+  Lock, Unlock, Sparkles, ChevronDown, ChevronUp, Loader2
 } from 'lucide-react'
 
 // ── Helpers (lógica original intacta) ────────────────────────────
@@ -78,6 +79,7 @@ const IconDocs = () => (
 )
 
 export default function DocumentosPage() {
+  const { toast, showToast } = useToast()
   const { canEditCases, canUploadConfidential } = useAuth()
   const fileInputRef = useRef(null)
 
@@ -96,6 +98,9 @@ export default function DocumentosPage() {
   const [dragOver,    setDragOver]    = useState(false)
   const [deleteId,    setDeleteId]    = useState(null)
   const [deleteNombre,setDeleteNombre]= useState('')
+  const [expandedIA,  setExpandedIA]  = useState(null)
+  const [analyzingIds, setAnalyzingIds] = useState(new Set())
+  const [togglingIds, setTogglingIds] = useState(new Set())
 
   // ── Lógica original intacta ───────────────────────────────────
   useEffect(() => {
@@ -138,7 +143,7 @@ export default function DocumentosPage() {
       setArchivos([]); setDescripcion('')
       const r = await getDocumentos(casoSel)
       setDocs(r.data.documentos)
-    } catch { alert('Error al subir archivos') }
+    } catch { showToast('Error al subir archivos') }
     finally  { setUploading(false) }
   }
 
@@ -151,20 +156,47 @@ export default function DocumentosPage() {
       await deleteDocumento(deleteId)
       setDocs(prev => prev.filter(d => d.id_documento !== deleteId))
       setDeleteId(null); setDeleteNombre('')
-    } catch { alert('Error al eliminar') }
+    } catch { showToast('Error al eliminar') }
   }
 
   const handleDescargar = async (id, nombre) => {
-    const token = localStorage.getItem('token')
-    const res   = await fetch(
-      `http://localhost:3001/api/documentos/${id}/descargar`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    )
-    const blob = await res.blob()
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href = url; a.download = nombre; a.click()
-    URL.revokeObjectURL(url)
+    try {
+      const token = localStorage.getItem('token')
+      const res   = await fetch(
+        `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/documentos/${id}/descargar`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      )
+      if (res.status === 401) { window.location.href = '/login'; return }
+      if (!res.ok) { showToast('Error al descargar el archivo'); return }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = nombre; a.click()
+      URL.revokeObjectURL(url)
+    } catch { showToast('Error de conexión al descargar') }
+  }
+
+  const handleToggleLock = async (id) => {
+    setTogglingIds(prev => new Set([...prev, id]))
+    try {
+      const r = await toggleBloqueoDoc(id)
+      setDocs(prev => prev.map(d => d.id_documento === id ? { ...d, bloqueado: r.data.documento.bloqueado } : d))
+    } catch { /* silencioso */ }
+    finally {
+      setTogglingIds(prev => { const s = new Set(prev); s.delete(id); return s })
+    }
+  }
+
+  const handleAnalizar = async (id) => {
+    setAnalyzingIds(prev => new Set([...prev, id]))
+    try {
+      await analizarDocumentoIA(id)
+      const r = await getDocumentos(casoSel)
+      setDocs(r.data.documentos)
+    } catch { /* análisis falló, seguir sin mostrar error bloqueante */ }
+    finally {
+      setAnalyzingIds(prev => { const s = new Set(prev); s.delete(id); return s })
+    }
   }
 
   const casoActual    = casos.find(c => String(c.id_caso) === String(casoSel))
@@ -174,6 +206,7 @@ export default function DocumentosPage() {
 
   return (
     <>
+      <Toast toast={toast} />
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
       <style>{`
         @keyframes fadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
@@ -235,12 +268,23 @@ export default function DocumentosPage() {
         .dc-input::placeholder { color:rgba(255,255,255,0.2); }
 
         .dc-action { width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all 0.15s ease;color:rgba(255,255,255,0.38); }
-        .dc-action:hover.dl  { background:rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.25);color:#93BBFC; }
-        .dc-action:hover.del { background:rgba(239,68,68,0.12); border-color:rgba(239,68,68,0.25); color:#FCA5A5; }
+        .dc-action:hover.dl   { background:rgba(59,130,246,0.12);border-color:rgba(59,130,246,0.25);color:#93BBFC; }
+        .dc-action:hover.del  { background:rgba(239,68,68,0.12); border-color:rgba(239,68,68,0.25); color:#FCA5A5; }
+        .dc-action.lock-on    { background:rgba(251,146,60,0.1); border-color:rgba(251,146,60,0.3); color:#FB923C; }
+        .dc-action.lock-on:hover { background:rgba(251,146,60,0.2); border-color:rgba(251,146,60,0.5); }
+        .dc-action.lock-off   { background:rgba(134,239,172,0.08); border-color:rgba(134,239,172,0.25); color:#86EFAC; }
+        .dc-action.lock-off:hover { background:rgba(134,239,172,0.16); border-color:rgba(134,239,172,0.45); }
+        .dc-action:disabled   { opacity:0.45; cursor:not-allowed; }
 
         .dc-doc-row { display:flex;align-items:center;gap:12px;padding:13px 20px;border-bottom:1px solid rgba(255,255,255,0.04);transition:all 0.15s ease; }
         .dc-doc-row:hover { background:rgba(201,168,76,0.04);border-bottom-color:rgba(201,168,76,0.08); }
         .dc-doc-row:last-child { border-bottom:none; }
+
+        .dc-ia-btn { display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:6px;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.25);color:#C4B5FD;font-family:'Inter',sans-serif;font-size:10px;font-weight:700;cursor:pointer;transition:all 0.15s ease; }
+        .dc-ia-btn:hover { background:rgba(139,92,246,0.22);border-color:rgba(139,92,246,0.4); }
+        @keyframes fadeDown { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        .dc-ia-panel { animation:fadeDown 0.2s ease both; }
 
         .dc-btn-primary { display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:8px;background:linear-gradient(135deg,#C9A84C 0%,#9A7A32 100%);border:none;color:#020818;font-family:'Inter',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all 0.15s ease; }
         .dc-btn-primary:hover { background:linear-gradient(135deg,#E8C97A 0%,#C9A84C 100%);transform:translateY(-1px);box-shadow:0 4px 14px rgba(201,168,76,0.3); }
@@ -515,24 +559,107 @@ export default function DocumentosPage() {
                 ) : (
                   docsFiltrados.map(doc=>{
                     const fc=getFileColor(doc.tipo); const FIcon=getFileIcon(doc.tipo)
+                    const ia = doc.analisis ? (() => { try { return JSON.parse(doc.analisis) } catch { return null } })() : null
+                    const iaOpen = expandedIA === doc.id_documento
+                    const urgColor = ia?.urgencia === 'alta' ? '#FCA5A5' : ia?.urgencia === 'media' ? '#FCD34D' : '#86EFAC'
                     return (
-                      <div key={doc.id_documento} className="dc-doc-row">
-                        <div style={{width:'36px',height:'36px',borderRadius:'9px',background:fc.bg,border:`1px solid ${fc.border}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-                          <FIcon size={17} style={{color:fc.color}}/>
+                      <div key={doc.id_documento} style={{borderBottom:'1px solid rgba(255,255,255,0.04)'}}>
+                        <div className="dc-doc-row" style={{borderBottom:'none'}}>
+                          <div style={{width:'36px',height:'36px',borderRadius:'9px',background:fc.bg,border:`1px solid ${fc.border}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                            <FIcon size={17} style={{color:fc.color}}/>
+                          </div>
+                          <div style={{flex:1,minWidth:0}}>
+                            <p style={{fontFamily:"'Inter',sans-serif",fontSize:'13px',fontWeight:'600',color:'rgba(255,255,255,0.88)',margin:'0 0 2px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{doc.nombre_original}</p>
+                            {doc.descripcion && <p style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',color:'rgba(255,255,255,0.35)',margin:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{doc.descripcion}</p>}
+                            {ia ? (
+                              <button className="dc-ia-btn" style={{marginTop:'4px'}} onClick={()=>setExpandedIA(iaOpen ? null : doc.id_documento)}>
+                                <Sparkles size={9}/> Resumen IA {iaOpen ? <ChevronUp size={9}/> : <ChevronDown size={9}/>}
+                              </button>
+                            ) : canEditCases && (
+                              analyzingIds.has(doc.id_documento) ? (
+                                <span className="dc-ia-btn" style={{marginTop:'4px',cursor:'default',opacity:0.7}}>
+                                  <Loader2 size={9} style={{animation:'spin 1s linear infinite'}}/> Analizando…
+                                </span>
+                              ) : (
+                                <button className="dc-ia-btn" style={{marginTop:'4px'}} onClick={()=>handleAnalizar(doc.id_documento)}>
+                                  <Sparkles size={9}/> Analizar IA
+                                </button>
+                              )
+                            )}
+                          </div>
+                          <div><CategoriaBadge categoria={doc.categoria}/></div>
+                          <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.4)',margin:0}}>{formatSize(doc.tamanio)}</p>
+                          <p style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',color:'rgba(255,255,255,0.35)',margin:0}}>
+                            {new Date(doc.createdAt).toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'2-digit'})}
+                          </p>
+                          <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
+                            {canEditCases && (
+                              <button
+                                className={`dc-action ${doc.bloqueado ? 'lock-on' : 'lock-off'}`}
+                                title={doc.bloqueado ? 'Bloqueado — clic para liberar al cliente' : 'Libre — clic para bloquear'}
+                                disabled={togglingIds.has(doc.id_documento)}
+                                onClick={() => handleToggleLock(doc.id_documento)}
+                              >
+                                {togglingIds.has(doc.id_documento)
+                                  ? <Loader2 size={13} style={{animation:'spin 1s linear infinite'}}/>
+                                  : doc.bloqueado ? <Lock size={13}/> : <Unlock size={13}/>
+                                }
+                              </button>
+                            )}
+                            <button className="dc-action dl" title="Descargar" onClick={()=>handleDescargar(doc.id_documento,doc.nombre_original)}><Download size={13}/></button>
+                            {canEditCases && <button className="dc-action del" title="Eliminar" onClick={()=>handleDelete(doc.id_documento,doc.nombre_original)}><Trash2 size={13}/></button>}
+                          </div>
                         </div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <p style={{fontFamily:"'Inter',sans-serif",fontSize:'13px',fontWeight:'600',color:'rgba(255,255,255,0.88)',margin:'0 0 2px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{doc.nombre_original}</p>
-                          {doc.descripcion && <p style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',color:'rgba(255,255,255,0.35)',margin:0,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{doc.descripcion}</p>}
-                        </div>
-                        <div><CategoriaBadge categoria={doc.categoria}/></div>
-                        <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.4)',margin:0}}>{formatSize(doc.tamanio)}</p>
-                        <p style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',color:'rgba(255,255,255,0.35)',margin:0}}>
-                          {new Date(doc.createdAt).toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'2-digit'})}
-                        </p>
-                        <div style={{display:'flex',alignItems:'center',gap:'5px'}}>
-                          <button className="dc-action dl" title="Descargar" onClick={()=>handleDescargar(doc.id_documento,doc.nombre_original)}><Download size={13}/></button>
-                          {canEditCases && <button className="dc-action del" title="Eliminar" onClick={()=>handleDelete(doc.id_documento,doc.nombre_original)}><Trash2 size={13}/></button>}
-                        </div>
+
+                        {/* Panel Resumen IA */}
+                        {ia && iaOpen && (
+                          <div className="dc-ia-panel" style={{margin:'0 20px 14px',padding:'14px 18px',background:'rgba(139,92,246,0.06)',border:'1px dashed rgba(139,92,246,0.28)',borderRadius:'10px'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'10px'}}>
+                              <Sparkles size={13} style={{color:'#C4B5FD',flexShrink:0}}/>
+                              <span style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',fontWeight:'700',letterSpacing:'1.5px',textTransform:'uppercase',color:'rgba(196,181,253,0.8)'}}>Resumen IA</span>
+                              {ia.urgencia && (
+                                <span style={{marginLeft:'auto',padding:'2px 8px',borderRadius:'4px',background:`${urgColor}18`,border:`1px solid ${urgColor}40`,fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',color:urgColor,textTransform:'uppercase',letterSpacing:'0.5px'}}>
+                                  {ia.urgencia === 'alta' ? 'Urgencia alta' : ia.urgencia === 'media' ? 'Urgencia media' : 'Urgencia baja'}
+                                </span>
+                              )}
+                            </div>
+                            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                              {ia.tipo && (
+                                <div>
+                                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:'9px',fontWeight:'700',letterSpacing:'1.5px',textTransform:'uppercase',color:'rgba(255,255,255,0.3)',margin:'0 0 4px'}}>Tipo</p>
+                                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.75)',margin:0,textTransform:'capitalize'}}>{ia.tipo}</p>
+                                </div>
+                              )}
+                              {ia.partes?.length > 0 && (
+                                <div>
+                                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:'9px',fontWeight:'700',letterSpacing:'1.5px',textTransform:'uppercase',color:'rgba(255,255,255,0.3)',margin:'0 0 4px'}}>Partes</p>
+                                  {ia.partes.map((p,i)=>(
+                                    <p key={i} style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.65)',margin:'0 0 2px'}}>{p}</p>
+                                  ))}
+                                </div>
+                              )}
+                              {ia.fechasClave?.length > 0 && (
+                                <div>
+                                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:'9px',fontWeight:'700',letterSpacing:'1.5px',textTransform:'uppercase',color:'rgba(255,255,255,0.3)',margin:'0 0 4px'}}>Fechas clave</p>
+                                  {ia.fechasClave.map((f,i)=>(
+                                    <p key={i} style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.65)',margin:'0 0 2px'}}>{f}</p>
+                                  ))}
+                                </div>
+                              )}
+                              {ia.puntosPrincipales?.length > 0 && (
+                                <div style={{gridColumn:'1/-1'}}>
+                                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:'9px',fontWeight:'700',letterSpacing:'1.5px',textTransform:'uppercase',color:'rgba(255,255,255,0.3)',margin:'0 0 6px'}}>Puntos principales</p>
+                                  {ia.puntosPrincipales.map((pt,i)=>(
+                                    <div key={i} style={{display:'flex',gap:'8px',marginBottom:'4px'}}>
+                                      <span style={{color:'rgba(196,181,253,0.6)',fontSize:'10px',marginTop:'1px',flexShrink:0}}>&#9679;</span>
+                                      <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.65)',margin:0,lineHeight:1.5}}>{pt}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )
                   })
