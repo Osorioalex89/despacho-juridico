@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { getMisCasos, getMovimientos, chatCaso } from '../cases/casesService'
+import { getMisCasos, getMovimientos, chatCaso, getTimeline } from '../cases/casesService'
 import { useToast, Toast } from '../../components/ui/Toast'
 import { getMisDocumentos }            from '../documents/documentsService'
 import {
   FolderOpen, Clock, CheckCircle, XCircle,
-  AlertCircle, FileText, Calendar,
+  AlertCircle, FileText, Calendar, CalendarDays,
   ChevronRight, ChevronDown, ChevronUp, Download, Lock, Eye,
-  Bell, Gavel, Scale, Users, Sparkles, Send, Loader2, MessageSquare
+  Bell, Gavel, Scale, Users, Sparkles, Send, Loader2, MessageSquare, History
 } from 'lucide-react'
 
 // ── Estado config premium ─────────────────────────────────────────
@@ -82,7 +82,10 @@ export default function MisCasosPage() {
   const [movsPorCaso,  setMovsPorCaso]  = useState({})
   const [expandedIA,   setExpandedIA]   = useState(null)
   const [chatPorCaso,  setChatPorCaso]  = useState({}) // { [id_caso]: { open, history, input, loading } }
-  const [previewDoc,   setPreviewDoc]   = useState(null) // { id, nombre, tipo, blobUrl }
+  const [previewDoc,       setPreviewDoc]       = useState(null) // { id, nombre, tipo, blobUrl }
+  const [timelinePorCaso,  setTimelinePorCaso]  = useState({}) // { [id_caso]: events[] }
+  const [tlLoadingPorCaso, setTlLoadingPorCaso] = useState({}) // { [id_caso]: bool }
+  const [tlAbierto,        setTlAbierto]        = useState({}) // { [id_caso]: bool }
 
   const getChatState = (id) => chatPorCaso[id] || { open:false, history:[], input:'', loading:false }
   const setChatState = (id, patch) => setChatPorCaso(prev => ({
@@ -100,6 +103,21 @@ export default function MisCasosPage() {
       setChatState(id_caso, { history:[...newHistory, { role:'assistant', content:r.data.respuesta }], loading:false })
     } catch {
       setChatState(id_caso, { history:[...newHistory, { role:'assistant', content:'Error al conectar con el asistente. Intenta de nuevo.' }], loading:false })
+    }
+  }
+
+  const toggleHistorial = async (id_caso) => {
+    const yaAbierto = tlAbierto[id_caso]
+    setTlAbierto(prev => ({ ...prev, [id_caso]: !yaAbierto }))
+    if (!yaAbierto && !timelinePorCaso[id_caso]) {
+      setTlLoadingPorCaso(prev => ({ ...prev, [id_caso]: true }))
+      getTimeline(id_caso)
+        .then(res => {
+          const eventos = (res.data.timeline || []).filter(ev => ev.tipo !== 'comentario')
+          setTimelinePorCaso(prev => ({ ...prev, [id_caso]: eventos }))
+        })
+        .catch(() => setTimelinePorCaso(prev => ({ ...prev, [id_caso]: [] })))
+        .finally(() => setTlLoadingPorCaso(prev => ({ ...prev, [id_caso]: false })))
     }
   }
 
@@ -592,6 +610,86 @@ export default function MisCasosPage() {
                                 })}
                               </div>
                             )}
+
+                            {/* ── Historial del caso ── */}
+                            {(() => {
+                              const TL_CFG = {
+                                apertura:   { label:'Apertura',   color:'#C9A84C', bg:'rgba(201,168,76,0.1)',  Icon:Scale       },
+                                documento:  { label:'Documento',  color:'#93BBFC', bg:'rgba(147,187,252,0.1)', Icon:FileText    },
+                                cita:       { label:'Cita',       color:'#86EFAC', bg:'rgba(134,239,172,0.1)', Icon:CalendarDays},
+                                movimiento: { label:'Movimiento', color:'#FB923C', bg:'rgba(251,146,60,0.1)',  Icon:Gavel       },
+                              }
+                              const tlOpen    = tlAbierto[caso.id_caso] || false
+                              const tlEvents  = timelinePorCaso[caso.id_caso] || []
+                              const tlLoading = tlLoadingPorCaso[caso.id_caso] || false
+                              return (
+                                <div style={{ marginTop:'16px' }}>
+                                  <button
+                                    onClick={e => { e.stopPropagation(); toggleHistorial(caso.id_caso) }}
+                                    style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor:'pointer', padding:0, marginBottom: tlOpen ? '10px' : 0 }}
+                                  >
+                                    <History size={12} style={{ color:'rgba(147,187,252,0.75)' }}/>
+                                    <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'700', letterSpacing:'2px', textTransform:'uppercase', color:'rgba(147,187,252,0.75)' }}>
+                                      Historial del caso
+                                    </span>
+                                    {tlOpen
+                                      ? <ChevronDown size={10} style={{ color:'rgba(147,187,252,0.5)' }}/>
+                                      : <ChevronRight size={10} style={{ color:'rgba(147,187,252,0.5)' }}/>
+                                    }
+                                  </button>
+                                  {tlOpen && (
+                                    <div onClick={e => e.stopPropagation()}>
+                                      {tlLoading ? (
+                                        <div style={{ padding:'16px', textAlign:'center' }}>
+                                          <div style={{ width:'22px', height:'22px', borderRadius:'50%', border:'2px solid rgba(201,168,76,0.3)', borderTopColor:'#C9A84C', animation:'spin 0.8s linear infinite', margin:'0 auto' }}/>
+                                        </div>
+                                      ) : tlEvents.length === 0 ? (
+                                        <div style={{ textAlign:'center', padding:'16px 0', display:'flex', flexDirection:'column', alignItems:'center', gap:'6px' }}>
+                                          <Clock size={18} style={{ color:'rgba(255,255,255,0.12)' }}/>
+                                          <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.3)', margin:0 }}>
+                                            Sin eventos en el historial
+                                          </p>
+                                        </div>
+                                      ) : (
+                                        <div style={{ position:'relative', paddingLeft:'30px' }}>
+                                          {/* Línea vertical */}
+                                          <div style={{ position:'absolute', left:'10px', top:'12px', bottom:'12px', width:'1.5px', background:'linear-gradient(to bottom,rgba(147,187,252,0.5),rgba(147,187,252,0.05))' }}/>
+                                          {tlEvents.map((ev, i) => {
+                                            const cfg = TL_CFG[ev.tipo] || { label:ev.tipo, color:'#C4B5FD', bg:'rgba(196,181,253,0.1)', Icon:Clock }
+                                            const EvIcon = cfg.Icon
+                                            const fecha = ev.fecha
+                                              ? new Date(ev.fecha).toLocaleDateString('es-MX', { day:'numeric', month:'short', year:'numeric' })
+                                              : '—'
+                                            return (
+                                              <div key={i} style={{ position:'relative', marginBottom:'12px' }}>
+                                                {/* Nodo */}
+                                                <div style={{ position:'absolute', left:'-23px', top:'10px', width:'20px', height:'20px', borderRadius:'50%', background:cfg.bg, border:`1.5px solid ${cfg.color}`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                                                  <EvIcon size={9} style={{ color:cfg.color }}/>
+                                                </div>
+                                                {/* Card */}
+                                                <div style={{ background:'rgba(8,20,48,0.55)', border:'1px solid rgba(255,255,255,0.07)', borderRadius:'10px', padding:'9px 13px', transition:'border-color 0.15s' }}>
+                                                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', marginBottom:'4px' }}>
+                                                    <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'9px', fontWeight:'700', letterSpacing:'1px', textTransform:'uppercase', color:cfg.color, background:cfg.bg, border:`1px solid ${cfg.color}30`, borderRadius:'4px', padding:'2px 6px' }}>
+                                                      {cfg.label}
+                                                    </span>
+                                                    <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.28)', whiteSpace:'nowrap', flexShrink:0 }}>
+                                                      {fecha}
+                                                    </span>
+                                                  </div>
+                                                  <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.72)', margin:0, lineHeight:1.5, wordBreak:'break-word' }}>
+                                                    {ev.descripcion}
+                                                  </p>
+                                                </div>
+                                              </div>
+                                            )
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            })()}
 
                             {/* ── Chat IA ── */}
                             {(() => {
