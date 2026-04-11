@@ -44,7 +44,7 @@ export default function CaseForm() {
       setLoading(true)
       getCasoById(id)
         .then(res => {
-          const c = res.data
+          const c = res.data.caso
           setForm({
             asunto:         c.asunto                                        || '',
             tipo:           c.tipo                                          || '',
