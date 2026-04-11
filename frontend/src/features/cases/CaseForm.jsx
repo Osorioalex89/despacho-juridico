@@ -46,17 +46,17 @@ export default function CaseForm() {
         .then(res => {
           const c = res.data
           setForm({
-            asunto:         c.asunto         || '',
-            tipo:           c.tipo           || '',
-            estado:         c.estado         || 'activo',
-            descripcion:    c.descripcion    || '',
-            id_cliente:     c.id_cliente     || '',
-            juzgado:        c.juzgado        || '',
-            exp_externo:    c.exp_externo    || '',
-            contraparte:    c.contraparte    || '',
-            fecha_apertura: c.fecha_apertura || '',
-            fecha_limite:   c.fecha_limite   || '',
-            notas:          c.notas          || '',
+            asunto:         c.asunto                                        || '',
+            tipo:           c.tipo                                          || '',
+            estado:         c.estado                                        || 'activo',
+            descripcion:    c.descripcion                                   || '',
+            id_cliente:     c.id_cliente     ? String(c.id_cliente)         : '',
+            juzgado:        c.juzgado                                       || '',
+            exp_externo:    c.exp_externo                                   || '',
+            contraparte:    c.contraparte                                   || '',
+            fecha_apertura: c.fecha_apertura ? c.fecha_apertura.slice(0,10) : '',
+            fecha_limite:   c.fecha_limite   ? c.fecha_limite.slice(0,10)   : '',
+            notas:          c.notas                                         || '',
           })
         })
         .catch(() => setError('Error al cargar el caso'))
