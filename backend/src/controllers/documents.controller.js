@@ -165,9 +165,10 @@ export const descargarDocumento = async (req, res) => {
       return res.status(404).json({ message: 'Archivo no encontrado en Cloudinary' })
     }
 
+    const buffer = Buffer.from(await response.arrayBuffer())
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.nombre_original)}"`)
     res.setHeader('Content-Type', doc.tipo || 'application/octet-stream')
-    response.body.pipe(res)
+    res.end(buffer)
   } catch (error) {
     res.status(500).json({ message: 'Error interno del servidor' })
   }

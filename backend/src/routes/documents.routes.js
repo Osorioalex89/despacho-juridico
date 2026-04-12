@@ -69,9 +69,10 @@ router.get('/mis-documentos/:id/descargar', requireRole('cliente'), async (req, 
     if (!response.ok) {
       return res.status(404).json({ message: 'Archivo no encontrado' })
     }
+    const buffer = Buffer.from(await response.arrayBuffer())
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.nombre_original)}"`)
     res.setHeader('Content-Type', doc.tipo || 'application/octet-stream')
-    response.body.pipe(res)
+    res.end(buffer)
   } catch (error) {
     res.status(500).json({ message: 'Error interno del servidor' })
   }
@@ -95,9 +96,10 @@ router.get('/mis-documentos/:id/preview', requireRole('cliente'), async (req, re
     if (!response.ok) {
       return res.status(404).json({ message: 'Archivo no encontrado' })
     }
+    const buffer = Buffer.from(await response.arrayBuffer())
     res.setHeader('Content-Type', doc.tipo)
     res.setHeader('Content-Disposition', `inline; filename="${doc.nombre_original}"`)
-    response.body.pipe(res)
+    res.end(buffer)
   } catch (error) {
     console.error('Error en preview de documento:', error.message)
     res.status(500).json({ message: 'Error interno' })
