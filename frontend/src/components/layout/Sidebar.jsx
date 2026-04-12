@@ -217,7 +217,7 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose = () => {}
         className={`sb-aside${isMobileOpen ? ' sb-open' : ''}`}
         style={{
           width: '248px',
-          minHeight: '100vh',
+          height: '100%',
           flexShrink: 0,
           background: 'rgba(4,12,32,0.97)',
           backdropFilter: 'blur(24px)',
