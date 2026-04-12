@@ -91,7 +91,21 @@ async function runMigrations() {
       if (!isDuplicateColumn) throw err
     }
   }
-  console.log('[Migrations] Columnas verificadas.')
+
+  // Tabla historial chat IA (idempotente)
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS chat_mensajes (
+      id_mensaje   INT           NOT NULL AUTO_INCREMENT,
+      id_caso      INT           NOT NULL,
+      role         ENUM('user','assistant') NOT NULL,
+      content      TEXT          NOT NULL,
+      createdAt    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id_mensaje),
+      INDEX idx_chat_caso (id_caso)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `)
+
+  console.log('[Migrations] Columnas y tablas verificadas.')
 }
 
 // ── Conectar BD e iniciar servidor ────────────────────────────────

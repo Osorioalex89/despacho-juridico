@@ -5,7 +5,7 @@ import {
   createCaso, updateCaso, deleteCaso,
   addComentario, getCasoTimeline,
   getMovimientos, addMovimiento,
-  chatCaso,
+  chatCaso, getChatHistory,
 } from '../controllers/cases.controller.js'
 
 const router = Router()
@@ -44,6 +44,7 @@ router.put('/:id',               requireRole('abogado'),                updateCa
 router.delete('/:id',            requireRole('abogado'),                deleteCaso)
 // Comentarios — disponible para abogado y secretario
 router.post('/:id/comentarios',  requireRole('abogado', 'secretario'),  addComentario)
+router.get( '/:id/chat-history', requireRole('abogado', 'secretario', 'cliente'), getChatHistory)
 router.post('/:id/chat',         requireRole('abogado', 'secretario', 'cliente'), chatCaso)
 
 export default router

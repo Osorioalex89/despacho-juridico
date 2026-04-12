@@ -5,6 +5,7 @@ import Comment     from '../models/Comment.js'
 import Client      from '../models/Client.js'
 import User        from '../models/User.js'
 import Movimiento  from '../models/Movimiento.js'
+import ChatMensaje from '../models/ChatMensaje.js'
 import { notifyNewCaseComment, notifyMovimientoProcesal, notifyNuevoCasoAsignado } from '../services/emailService.js'
 
 // GET /api/casos
@@ -379,6 +380,34 @@ export const addMovimiento = async (req, res) => {
   }
 }
 
+// GET /api/casos/:id/chat-history — todos los roles autenticados con acceso al caso
+export const getChatHistory = async (req, res) => {
+  try {
+    const { id } = req.params
+
+    const caso = await Case.findByPk(id)
+    if (!caso) return res.status(404).json({ message: 'Caso no encontrado' })
+
+    // Verificar acceso cliente
+    if (req.user.rol === 'cliente') {
+      const cliente = await Client.findOne({ where: { id_usuario: req.user.id } })
+      if (!cliente || caso.id_cliente !== cliente.id_cliente) {
+        return res.status(403).json({ message: 'Sin acceso a este caso' })
+      }
+    }
+
+    const mensajes = await ChatMensaje.findAll({
+      where:  { id_caso: id },
+      order:  [['createdAt', 'ASC']],
+    })
+
+    res.json({ mensajes })
+  } catch (err) {
+    console.error('getChatHistory error:', err.message)
+    res.status(500).json({ message: 'Error al obtener historial' })
+  }
+}
+
 // POST /api/casos/:id/chat — abogado/secretario/cliente
 export const chatCaso = async (req, res) => {
   if (!process.env.GROQ_API_KEY) {
@@ -407,8 +436,17 @@ export const chatCaso = async (req, res) => {
       Document.findAll({ where: { id_caso: id }, limit: 20 }),
     ])
 
+    // Solo los últimos 10 mensajes se envían a Groq (control de tokens)
+    const historialReciente = historial.slice(-10)
+
     const { chatConCaso } = await import('../services/aiService.js')
-    const respuesta = await chatConCaso({ caso, movimientos, documentos, historial, pregunta: pregunta.trim() })
+    const respuesta = await chatConCaso({ caso, movimientos, documentos, historial: historialReciente, pregunta: pregunta.trim() })
+
+    // Persistir user + assistant en BD (fire-and-forget, no bloquea la respuesta)
+    ChatMensaje.bulkCreate([
+      { id_caso: id, role: 'user',      content: pregunta.trim() },
+      { id_caso: id, role: 'assistant', content: respuesta },
+    ]).catch(err => console.error('chatCaso persist error:', err.message))
 
     res.json({ respuesta })
   } catch (err) {

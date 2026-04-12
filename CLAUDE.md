@@ -19,6 +19,7 @@ Sin orquestador raíz. Nodemon no recarga `.env` — reiniciar manualmente al ca
 
 ### Dependencias
 `framer-motion` · `lucide-react` · `react-hook-form` + `zod` · `@turnstile/react` · `react-markdown`
+**Backend IA:** `groq-sdk` · `pdf-parse` (extracción texto PDF para enviar a Groq)
 
 ### Base de datos — `despacho_juridico`
 ```
@@ -123,7 +124,7 @@ APP_URL=http://localhost:5173
 CORS_ORIGIN=http://localhost:5173,http://localhost:5174
 TURNSTILE_SECRET=<secret_cloudflare>
 ADMIN_EMAIL=osorioalexander640@gmail.com
-GOOGLE_AI_API_KEY=AIza...        # opcional; sin key la IA no aparece · modelo: gemini-2.0-flash
+GROQ_API_KEY=gsk_...             # opcional; sin key la IA no aparece · modelo: llama-3.3-70b-versatile (Groq)
 SENDGRID_API_KEY=<key>          # producción usa SendGrid
 ```
 
@@ -152,7 +153,7 @@ Producción: `frontend/.env.production` con URLs reales (Vite lo aplica en `npm 
 | **Escalamiento urgencias** cron diario email abogados | `reminderWorker.js` |
 | **Movimientos procesales** abogado registra → email cliente | `Movimiento.js` · `CaseDetail.jsx` |
 | **Agente Monitoreo IA** job 07:00 MX → reporte BD + email | `jobMonitoreoIA` en `reminderWorker.js` |
-| **Chat IA por caso** Claude Haiku con contexto del caso; respuestas con `react-markdown` (negritas, listas, encabezados gold) | `POST /:id/chat` · `CaseDetail.jsx` |
+| **Chat IA por caso** Groq/Llama 3.3 70B con contexto del caso; respuestas con `react-markdown` (negritas, listas, encabezados gold) | `POST /:id/chat` · `CaseDetail.jsx` |
 | **Candado Digital** docs bloqueados por defecto → abogado libera | `PATCH /:id/toggle-bloqueo` · `DocumentosPage.jsx` |
 | **Preview Documentos** bloqueado=modal difuminado · libre=PDF/imagen inline | `documents.routes.js` · `MisCasosPage.jsx` |
 | **Semáforo de Caso** rojo/amarillo/verde por urgencia y vencimiento | `calcularSemaforo()` en `MisCasosPage.jsx` |
@@ -179,6 +180,7 @@ ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
 - `trust proxy 1` en `app.js` para rate-limit correcto
 - Email: SendGrid HTTP API (Gmail SMTP bloqueado en Railway). Sender verificado: `abogadoadmin89@gmail.com`
 - CORS_ORIGIN incluye frontend + landing
+- **IMPORTANTE:** Railway usa `npm ci` — al cambiar dependencias en `package.json` siempre ejecutar `npm install --package-lock-only` en `backend/` y commitear el `package-lock.json` actualizado. Si no, el build falla silenciosamente y Railway sigue corriendo el código antiguo.
 
 **Notas Vercel:**
 - Frontend: `vercel.json` con rewrites SPA · `VITE_API_URL` y `VITE_TURNSTILE_SITE_KEY` configuradas
@@ -191,7 +193,7 @@ Los documentos se almacenan en Cloudinary (no en disco — Railway filesystem es
 - `nombre` en BD almacena el `public_id` de Cloudinary (`despacho-juridico/xxxxx`)
 - Preview/descarga: el backend hace proxy (fetch Cloudinary URL → pipe a cliente)
 - `aiService.js`: acepta `buffer` directamente (no lee disco); soporta legacy URL para reanalizar
-- **Env vars requeridas en Railway:** `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET`
+- **Env vars requeridas en Railway:** `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET` · `GROQ_API_KEY`
 
 ## Iconografía
 - **Frontend:** `lucide-react`. Dashboard: `Scale/CalendarDays/Users`. Auth: `ShieldCheck/ShieldAlert`.
@@ -207,7 +209,7 @@ Los documentos se almacenan en Cloudinary (no en disco — Railway filesystem es
 
 ## Notas de entrega
 - **Versión escuela (este repo):** IA completa — análisis documental, monitoreo, chat, semáforo, preview.
-- **Versión tío (fork sin IA):** sin `GOOGLE_AI_API_KEY`, sin botones IA, sin job monitoreo.
+- **Versión tío (fork sin IA):** sin `GROQ_API_KEY`, sin botones IA, sin job monitoreo.
 
 ## Agentes especializados (`.claude/agents/`)
 | Agente | Responsabilidad |
@@ -218,15 +220,12 @@ Los documentos se almacenan en Cloudinary (no en disco — Railway filesystem es
 
 ## Pendientes técnicos
 
-### Persistencia del historial del Chat IA ⏳
-El historial del chat se pierde al refrescar — vive solo en estado React.
-```
-TODO: persistir chat IA en BD (Opción B — correcta)
-  BD: nueva tabla chat_mensajes → id_mensaje, id_caso, role[ENUM user|assistant], content[TEXT], createdAt
-  Backend: GET /api/casos/:id/chat-history · POST guarda cada mensaje al enviar/recibir
-  Frontend: cargar historial al montar CaseDetail, append en cada intercambio
-  Ventaja: accesible desde cualquier dispositivo, auditable, parte del expediente
-```
+### Persistencia del historial del Chat IA ✅
+Historial persistido en BD. El chat sobrevive refresco y es auditable por caso.
+- **BD:** `chat_mensajes` — migración idempotente en `app.js` startup
+- **Backend:** `GET /api/casos/:id/chat-history` · `chatCaso` guarda user+assistant con `bulkCreate` (fire-and-forget)
+- **Frontend:** `getChatHistory` en `casesService.js` · carga al activar tab chat en `CaseDetail.jsx`
+- **Control de tokens:** solo los últimos 10 mensajes se envían a Groq (`historial.slice(-10)`); BD guarda el historial completo
 
 ## Roadmap comercial
 **Versión actual — $55,000–$65,000 MXN:** sistema base + 2FA + IA + timeline + movimientos + landing + semáforo + preview

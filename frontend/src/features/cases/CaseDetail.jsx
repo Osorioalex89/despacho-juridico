@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
-import { getCasoById, getMovimientos, addMovimiento, chatCaso } from './casesService'
+import { getCasoById, getMovimientos, addMovimiento, chatCaso, getChatHistory } from './casesService'
 import CaseTimeline from './CaseTimeline'
 import {
   ArrowLeft, Pencil, FolderOpen, User, Calendar,
@@ -167,6 +167,11 @@ export default function CaseDetail() {
         .then(res => setMovimientos(res.data.movimientos))
         .catch(() => setMovimientos([]))
         .finally(() => setLoadingMovs(false))
+    }
+    if (tab === 'chat') {
+      getChatHistory(id)
+        .then(res => setChatHistory(res.data.mensajes.map(m => ({ role: m.role, content: m.content }))))
+        .catch(() => {}) // silencioso — el chat sigue funcionando aunque no cargue historial
     }
   }, [tab, id])
 
