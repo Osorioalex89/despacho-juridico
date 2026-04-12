@@ -168,7 +168,11 @@ export default function MisCasosPage() {
         showToast(data.message || 'Documento no disponible para vista previa', 'warn')
         return
       }
-      if (!res.ok) { showToast('Error al cargar la vista previa'); return }
+      if (!res.ok) {
+        try { const d = await res.json(); showToast(d.message || 'Error al cargar la vista previa', 'warn') }
+        catch { showToast('Error al cargar la vista previa') }
+        return
+      }
       const blob = await res.blob()
       const blobUrl = URL.createObjectURL(blob)
       setPreviewDoc({ id: doc.id_documento, nombre: doc.nombre_original, tipo: doc.tipo, blobUrl })
@@ -189,7 +193,11 @@ export default function MisCasosPage() {
       )
       if (res.status === 401) { window.location.href = '/login'; return }
       if (res.status === 403) { showToast('Este documento aún no ha sido liberado para descarga', 'warn'); return }
-      if (!res.ok) { showToast('Error al descargar el archivo'); return }
+      if (!res.ok) {
+        try { const d = await res.json(); showToast(d.message || 'Error al descargar el archivo', 'warn') }
+        catch { showToast('Error al descargar el archivo') }
+        return
+      }
       const blob = await res.blob()
       const url  = URL.createObjectURL(blob)
       const a    = document.createElement('a')
