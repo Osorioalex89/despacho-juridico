@@ -64,7 +64,7 @@ export const uploadDocumento = async (req, res) => {
     res.status(201).json({ message: 'Documento subido correctamente', documento: doc })
 
     // Análisis IA — fire-and-forget (buffer todavía disponible)
-    if (process.env.GOOGLE_AI_API_KEY) {
+    if (process.env.GROQ_API_KEY) {
       analizarDocumento({
         buffer:        req.file.buffer,
         nombreArchivo: req.file.originalname,
@@ -122,7 +122,7 @@ export const deleteDocumento = async (req, res) => {
 // POST /api/documentos/:id/analizar — dispara análisis IA de forma síncrona
 export const reanalizar = async (req, res) => {
   try {
-    if (!process.env.GOOGLE_AI_API_KEY) {
+    if (!process.env.GROQ_API_KEY) {
       return res.status(503).json({ message: 'Análisis IA no disponible' })
     }
 
