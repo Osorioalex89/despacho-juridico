@@ -1,9 +1,9 @@
-import Anthropic from '@anthropic-ai/sdk'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY)
 
 /**
- * Analiza un documento legal con Claude Haiku.
+ * Analiza un documento legal con Gemini Flash.
  * Acepta buffer (Cloudinary/memoryStorage) o rutaArchivo (legacy disco).
  * @returns {{ tipo, partes, fechasClave, puntosPrincipales, urgencia }}
  */
@@ -11,47 +11,47 @@ export const analizarDocumento = async ({ buffer, rutaArchivo, nombreArchivo, ti
   // Obtener buffer: desde parámetro directo o descargando desde URL de Cloudinary
   let fileBuffer = buffer
   if (!fileBuffer && rutaArchivo) {
-    // Soporte legacy: si rutaArchivo es una URL (Cloudinary), descargamos
     if (rutaArchivo.startsWith('http')) {
       const res  = await fetch(rutaArchivo)
       fileBuffer = Buffer.from(await res.arrayBuffer())
     } else {
-      // Ruta en disco (solo en entornos de desarrollo locales)
       const { default: fs } = await import('fs')
       fileBuffer = fs.readFileSync(rutaArchivo)
     }
   }
 
-  const content = []
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+
+  const parts = []
 
   if (tipoArchivo?.includes('pdf')) {
-    const data = fileBuffer.toString('base64')
-    content.push({
-      type: 'document',
-      source: { type: 'base64', media_type: 'application/pdf', data },
+    parts.push({
+      inlineData: {
+        data:     fileBuffer.toString('base64'),
+        mimeType: 'application/pdf',
+      },
     })
   } else if (tipoArchivo?.startsWith('image/')) {
-    const data      = fileBuffer.toString('base64')
-    const mediaType = tipoArchivo.includes('png') ? 'image/png'
-                    : tipoArchivo.includes('gif') ? 'image/gif'
-                    : tipoArchivo.includes('webp') ? 'image/webp'
-                    : 'image/jpeg'
-    content.push({
-      type: 'image',
-      source: { type: 'base64', media_type: mediaType, data },
+    const mimeType = tipoArchivo.includes('png')  ? 'image/png'
+                   : tipoArchivo.includes('gif')  ? 'image/gif'
+                   : tipoArchivo.includes('webp') ? 'image/webp'
+                   : 'image/jpeg'
+    parts.push({
+      inlineData: {
+        data: fileBuffer.toString('base64'),
+        mimeType,
+      },
     })
   } else {
-    // Texto plano, Word, etc.
     let texto = ''
     try { texto = fileBuffer.toString('utf-8').slice(0, 8000) } catch { /* binario — ignorar */ }
     const cuerpo = texto
       ? `Contenido del archivo "${nombreArchivo}":\n\n${texto}`
       : `Archivo: "${nombreArchivo}" (tipo: ${tipoArchivo || 'desconocido'}). No se pudo leer el contenido binario; infiere del nombre.`
-    content.push({ type: 'text', text: cuerpo })
+    parts.push({ text: cuerpo })
   }
 
-  content.push({
-    type: 'text',
+  parts.push({
     text: `Eres un asistente jurídico experto. Analiza el documento y responde ÚNICAMENTE con JSON válido (sin markdown ni explicaciones) con esta estructura:
 {
   "tipo": "tipo de documento (ej: contrato, demanda, acuerdo, escritura, poder notarial, etc.)",
@@ -63,14 +63,9 @@ export const analizarDocumento = async ({ buffer, rutaArchivo, nombreArchivo, ti
 Reglas: máximo 3 fechas y 5 puntos principales. Si el documento no está en español, traduce el resumen. Determina urgencia: alta si hay plazos inmediatos o acciones legales urgentes, media si hay plazos futuros, baja si es informativo.`,
   })
 
-  const response = await client.messages.create({
-    model:      'claude-haiku-4-5-20251001',
-    max_tokens: 700,
-    messages:   [{ role: 'user', content }],
-  })
-
-  const raw   = response.content[0]?.text ?? ''
-  const match = raw.match(/\{[\s\S]*\}/)
+  const result = await model.generateContent(parts)
+  const raw    = result.response.text()
+  const match  = raw.match(/\{[\s\S]*\}/)
   if (!match) throw new Error(`IA no devolvió JSON válido: ${raw.slice(0, 200)}`)
   return JSON.parse(match[0])
 }
@@ -96,7 +91,7 @@ export const chatConCaso = async ({ caso, movimientos = [], documentos = [], his
       }).join('\n')
     : 'Sin documentos.'
 
-  const sistema = `Eres un asistente jurídico especializado en legislación mexicana, asignado al expediente siguiente. Responde en español, de forma clara y profesional. No inventes datos que no estén en el expediente.
+  const systemInstruction = `Eres un asistente jurídico especializado en legislación mexicana, asignado al expediente siguiente. Responde en español, de forma clara y profesional. No inventes datos que no estén en el expediente.
 
 EXPEDIENTE:
 Folio: ${caso.folio}
@@ -112,19 +107,20 @@ ${movText}
 DOCUMENTOS:
 ${docText}`
 
-  const messages = [
-    ...historial.map(h => ({ role: h.role, content: h.content })),
-    { role: 'user', content: pregunta },
-  ]
-
-  const response = await client.messages.create({
-    model:      'claude-haiku-4-5-20251001',
-    max_tokens: 800,
-    system:     sistema,
-    messages,
+  const model = genAI.getGenerativeModel({
+    model:             'gemini-2.0-flash',
+    systemInstruction,
   })
 
-  return response.content[0]?.text ?? 'Sin respuesta.'
+  // Convertir historial al formato de Gemini (role: 'user'|'model')
+  const history = historial.map(h => ({
+    role:  h.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: h.content }],
+  }))
+
+  const chat   = model.startChat({ history })
+  const result = await chat.sendMessage(pregunta)
+  return result.response.text() || 'Sin respuesta.'
 }
 
 /**
@@ -183,14 +179,10 @@ Responde con este JSON:
 
 Reglas: máximo 4 acciones recomendadas, máximo 3 alertas (array vacío si no hay). Riesgo alto si hay plazos próximos, contraparte activa o documentos urgentes.`
 
-  const response = await client.messages.create({
-    model:      'claude-haiku-4-5-20251001',
-    max_tokens: 600,
-    messages:   [{ role: 'user', content: prompt }],
-  })
-
-  const raw   = response.content[0]?.text ?? ''
-  const match = raw.match(/\{[\s\S]*\}/)
+  const model  = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const result = await model.generateContent(prompt)
+  const raw    = result.response.text()
+  const match  = raw.match(/\{[\s\S]*\}/)
   if (!match) throw new Error(`IA no devolvió JSON válido: ${raw.slice(0, 200)}`)
   return JSON.parse(match[0])
 }
