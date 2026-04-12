@@ -272,7 +272,7 @@ const jobEscalamientoUrgencias = async () => {
 
 // ── Job 5 — Monitoreo IA de casos ─────────────────────────────────
 const jobMonitoreoIA = async () => {
-  if (!process.env.ANTHROPIC_API_KEY) return
+  if (!process.env.GOOGLE_AI_API_KEY) return
   console.log('[Worker] Monitoreo IA: iniciando...')
   const baseUrl = process.env.APP_URL || 'http://localhost:5173'
 
@@ -389,7 +389,7 @@ export const startReminderWorker = () => {
   })
 
   // Job 5: Monitoreo IA — todos los días a las 07:00 (solo si hay API key)
-  if (process.env.ANTHROPIC_API_KEY) {
+  if (process.env.GOOGLE_AI_API_KEY) {
     cron.schedule('0 7 * * *', jobMonitoreoIA, {
       timezone: 'America/Mexico_City',
     })
