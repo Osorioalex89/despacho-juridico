@@ -65,9 +65,9 @@ router.get('/mis-documentos/:id/descargar', requireRole('cliente'), async (req, 
     if (doc.bloqueado) {
       return res.status(403).json({ message: 'Este documento aún no está disponible para descarga' })
     }
-    const filePath = path.join('./uploads', doc.nombre)
+    const filePath = path.resolve('./uploads', doc.nombre)
     if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'Archivo no encontrado' })
+      return res.status(404).json({ message: 'Archivo no encontrado en el servidor' })
     }
     res.download(filePath, doc.nombre_original)
   } catch (error) {

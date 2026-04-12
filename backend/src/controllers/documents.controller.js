@@ -134,7 +134,7 @@ export const descargarDocumento = async (req, res) => {
     const doc = await Document.findByPk(req.params.id)
     if (!doc) return res.status(404).json({ message: 'Documento no encontrado' })
 
-    const filePath = path.join('./uploads', doc.nombre)
+    const filePath = path.resolve('./uploads', doc.nombre)
     if (!fs.existsSync(filePath)) {
       return res.status(404).json({ message: 'Archivo no encontrado en el servidor' })
     }
