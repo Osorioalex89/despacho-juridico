@@ -76,7 +76,7 @@ text-primary: rgba(255,255,255,0.95) · text-secondary: rgba(255,255,255,0.55)
 **Fuentes:** Playfair Display (títulos) · Inter (UI) · **Logo:** SVG balanza + monograma "SC" gold
 **Badges estado:** activo=`#93BBFC` · urgente=`#FCA5A5` · pendiente=`#FCD34D` · en_revision=`#C4B5FD` · cerrado=`#9CA3AF`
 **Timeline íconos:** apertura→`Scale` `#C9A84C` · documento→`FileText` `#93BBFC` · cita→`CalendarDays` `#86EFAC` · comentario→`MessageSquare` `#C4B5FD` · movimiento→`Gavel` `#FB923C`
-**Chat IA — diseño "Avatar & Estructura":** tarjetas en lugar de burbujas · IA: borde izquierdo `3px solid rgba(201,168,76,0.5)` + glass blur + avatar `Scale` · Usuario: borde derecho `3px solid rgba(147,187,252,0.45)` + avatar con iniciales en azul · Portal cliente: modal fullscreen 680px (`zIndex:1100`) con botón "Consultar Asistente IA" en tarjeta del caso
+**Chat IA — diseño "Avatar & Estructura":** tarjetas en lugar de burbujas · IA: borde izquierdo `3px solid rgba(201,168,76,0.5)` + glass blur + avatar `Scale` · Usuario: borde derecho `3px solid rgba(147,187,252,0.45)` + avatar con iniciales en azul · Portal cliente: modal fullscreen 680px (`zIndex:1100`) con botón "Consultar Asistente IA" en tarjeta del caso · Contenedor `height:520px` fijo (no `minHeight`) + scrollbar custom gold 5px · Historial aislado por `id_usuario` — abogado y cliente tienen conversaciones separadas
 
 ## Convenciones
 - Tailwind CSS v4 + PostCSS. Estilos inline `style={{}}` para CSS custom vars.
@@ -154,7 +154,7 @@ Producción: `frontend/.env.production` con URLs reales (Vite lo aplica en `npm 
 | **Escalamiento urgencias** cron diario email abogados | `reminderWorker.js` |
 | **Movimientos procesales** abogado registra → email cliente | `Movimiento.js` · `CaseDetail.jsx` |
 | **Agente Monitoreo IA** job 07:00 MX → reporte BD + email | `jobMonitoreoIA` en `reminderWorker.js` |
-| **Chat IA por caso** Groq/Llama 3.3 70B con contexto del caso; respuestas con `react-markdown` (negritas, listas, encabezados gold); historial persistido en BD `chat_mensajes`; ventana de 10 mensajes a Groq | `POST /:id/chat` · `GET /:id/chat-history` · `CaseDetail.jsx` · `MisCasosPage.jsx` |
+| **Chat IA por caso** Groq/Llama 3.3 70B con contexto del caso; respuestas con `react-markdown`; historial persistido en BD `chat_mensajes` **por usuario** (`id_usuario`); ventana de 10 mensajes a Groq; altura fija 520px con scroll interno; scrollbar custom gold | `POST /:id/chat` · `GET /:id/chat-history` · `CaseDetail.jsx` · `MisCasosPage.jsx` |
 | **Candado Digital** docs bloqueados por defecto → abogado libera | `PATCH /:id/toggle-bloqueo` · `DocumentosPage.jsx` |
 | **Preview Documentos** bloqueado=modal difuminado · libre=PDF/imagen inline | `documents.routes.js` · `MisCasosPage.jsx` |
 | **Semáforo de Caso** rojo/amarillo/verde por urgencia y vencimiento | `calcularSemaforo()` en `MisCasosPage.jsx` |
@@ -166,7 +166,7 @@ Producción: `frontend/.env.production` con URLs reales (Vite lo aplica en `npm 
 ALTER TABLE casos ADD COLUMN reporte_ia TEXT NULL;
 ALTER TABLE casos ADD COLUMN reporte_ia_at DATETIME NULL;
 ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
--- chat_mensajes: CREATE TABLE IF NOT EXISTS (se crea en runMigrations())
+-- chat_mensajes: CREATE TABLE IF NOT EXISTS + ALTER ADD COLUMN id_usuario INT NULL (se aplica en runMigrations())
 ```
 
 ## Despliegue — Producción ✅
@@ -223,11 +223,21 @@ Los documentos se almacenan en Cloudinary (no en disco — Railway filesystem es
 ## Pendientes técnicos
 
 ### Persistencia del historial del Chat IA ✅
-Historial persistido en BD. El chat sobrevive refresco y es auditable por caso.
-- **BD:** `chat_mensajes` — migración idempotente en `app.js` startup
-- **Backend:** `GET /api/casos/:id/chat-history` · `chatCaso` guarda user+assistant con `bulkCreate` (fire-and-forget)
+Historial persistido en BD, aislado por usuario. El chat sobrevive refresco y es auditable por caso.
+- **BD:** `chat_mensajes` — `id_caso` + `id_usuario` + `role` + `content`; migración idempotente en `app.js`
+- **Backend:** `GET /:id/chat-history` filtra `{ id_caso, id_usuario }` · `chatCaso` guarda con `id_usuario: req.user.id`
 - **Frontend:** `getChatHistory` en `casesService.js` · carga al activar tab chat en `CaseDetail.jsx`
-- **Control de tokens:** solo los últimos 10 mensajes se envían a Groq (`historial.slice(-10)`); BD guarda el historial completo
+- **Control de tokens:** solo los últimos 10 mensajes se envían a Groq; BD guarda el historial completo
+
+### Layout panel admin ✅
+Sidebar fijo — solo el área de contenido central hace scroll.
+- `PanelLayout.jsx`: contenedor externo `height:100vh` + `overflow:hidden`; área de contenido `overflowY:auto`
+- `Sidebar.jsx`: `height:100%` en lugar de `minHeight:100vh`
+
+### Stat cards Gestión de Casos ✅
+Los conteos en las cards (Activos/Urgentes/Pendientes/etc.) son siempre globales, independientes del filtro activo.
+- `getCasos` en backend devuelve `statsPorEstado` — query paralela `GROUP BY estado` sin filtros
+- `CasesPage.jsx`: `countByEstado` lee `statsPorEstado` del API en lugar de filtrar la lista paginada
 
 ## Roadmap comercial
 **Versión actual — $55,000–$65,000 MXN:** sistema base + 2FA + IA + timeline + movimientos + landing + semáforo + preview
