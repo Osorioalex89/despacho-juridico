@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import ReactMarkdown from 'react-markdown'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getCasoById, getMovimientos, addMovimiento, chatCaso } from './casesService'
@@ -536,9 +537,15 @@ export default function CaseDetail() {
                         background: msg.role === 'user' ? 'rgba(201,168,76,0.14)' : 'rgba(139,92,246,0.1)',
                         border: msg.role === 'user' ? '1px solid rgba(201,168,76,0.28)' : '1px solid rgba(139,92,246,0.22)',
                       }}>
-                        <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.85)', margin:0, lineHeight:1.6, whiteSpace:'pre-wrap' }}>
-                          {msg.content}
-                        </p>
+                        {msg.role === 'assistant' ? (
+                          <div style={{ fontFamily:"'Inter',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.85)', lineHeight:1.6 }} className="md-chat">
+                            <ReactMarkdown>{msg.content}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.85)', margin:0, lineHeight:1.6 }}>
+                            {msg.content}
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}

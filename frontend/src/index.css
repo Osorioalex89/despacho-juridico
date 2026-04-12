@@ -1,1 +1,21 @@
 @import "tailwindcss";
+
+/* Chat IA — estilos Markdown */
+.md-chat p          { margin: 0 0 6px 0; }
+.md-chat p:last-child { margin-bottom: 0; }
+.md-chat strong     { color: #E8C97A; font-weight: 600; }
+.md-chat em         { color: rgba(255,255,255,0.7); font-style: italic; }
+.md-chat h1,.md-chat h2,.md-chat h3 {
+  color: #C9A84C; font-weight: 600; margin: 8px 0 4px 0; font-size: 13px;
+}
+.md-chat ul,.md-chat ol { margin: 4px 0 6px 16px; padding: 0; }
+.md-chat li         { margin-bottom: 2px; }
+.md-chat code       {
+  background: rgba(201,168,76,0.12); color: #E8C97A;
+  padding: 1px 5px; border-radius: 4px; font-size: 12px;
+}
+.md-chat pre        {
+  background: rgba(0,0,0,0.3); border-radius: 6px;
+  padding: 8px; overflow-x: auto; margin: 6px 0;
+}
+.md-chat pre code   { background: none; padding: 0; }
