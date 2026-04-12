@@ -13,23 +13,26 @@ Repo: github.com/Osorioalex89/despacho-juridico · Frontend `:5173` · Backend `
 Sin orquestador raíz. Nodemon no recarga `.env` — reiniciar manualmente al cambiar variables.
 
 ## Arquitectura
-**Frontend** `frontend/src/`: Router v7 · `context/AuthContext.jsx` · `services/axios.config.js` (base `VITE_API_URL`, Bearer token, logout en 401, excluye `/auth/verify-otp` y `/auth/login`) · `features/` · `services/`
+**Frontend** `frontend/src/`: Router v7 · `context/AuthContext.jsx` · `services/axios.config.js` (base `VITE_API_URL`, Bearer token, logout en 401, excluye `/auth/verify-otp` y `/auth/login`)
 **Backend** `backend/src/`: Express · helmet · express-rate-limit · JWT · Sequelize + MySQL2 (`sync alter:false`) · multer uploads en `/uploads` (solo accesible vía endpoints auth)
 **Landing** `Landig-page/src/`: Vite + React · proxy `/api → :3001` · `organisms/` · framer-motion
 
-### Dependencias destacadas
+### Dependencias
 `framer-motion` · `lucide-react` · `react-hook-form` + `zod` · `@turnstile/react`
 
 ### Base de datos — `despacho_juridico`
 ```
 usuarios    → id_usuario, nombre, correo, contrasena[bcrypt], rol, estado, activo
-              + verification_token, otp_code, otp_expires, otp_intentos, reset_solicitado, reset_solicitado_at, origen[nullable]
+              + verification_token, otp_code, otp_expires, otp_intentos, reset_solicitado,
+                reset_solicitado_at, origen[nullable]
 clientes    → id_cliente, id_usuario[FK nullable], nombre, telefono, correo, direccion, rfc, notas
-casos       → id_caso, folio[unique], asunto, tipo, estado, id_cliente, id_abogado, fecha_apertura, fecha_limite, reporte_ia[TEXT], reporte_ia_at[DATETIME]
+casos       → id_caso, folio[unique], asunto, tipo, estado, id_cliente, id_abogado,
+              fecha_apertura, fecha_limite, reporte_ia[TEXT], reporte_ia_at[DATETIME]
 citas       → id_cita, id_cliente, id_caso, id_abogado, fecha, hora, motivo, estado, mensaje, id_solicitante
-documentos  → id_documento, id_caso, id_usuario, nombre, nombre_original, tipo, tamanio, categoria, descripcion, analisis[TEXT], bloqueado[BOOL default:true]
+documentos  → id_documento, id_caso, id_usuario, nombre, nombre_original, tipo, tamanio,
+              categoria, descripcion, analisis[TEXT], bloqueado[BOOL default:true]
 comentarios → id_comentario, id_caso[FK→CASCADE], id_usuario[FK], contenido[TEXT], createdAt, updatedAt
-movimientos → id_movimiento, id_caso[FK→CASCADE], tipo[ENUM], descripcion[TEXT], fecha_movimiento[DATE], createdAt, updatedAt
+movimientos → id_movimiento, id_caso[FK→CASCADE], tipo[ENUM], descripcion[TEXT], fecha_movimiento[DATE]
 ```
 **Estados caso:** `activo` · `urgente` · `pendiente` · `en_revision` · `cerrado`
 **Estados cita:** `pendiente` · `confirmada` · `cancelada`
@@ -44,13 +47,14 @@ POST /api/auth/verify-otp            → Paso 2 OTP → { token, user }
 POST /api/auth/solicitar-reset       → público; notifica admins
 POST /api/auth/admin-reset-password  → protegido (abogado/secretario)
 CRUD /api/clientes · /api/casos · /api/citas · /api/documentos · /api/usuarios
-PATCH /api/documentos/:id/toggle-bloqueo       → abogado/secretario
-GET  /api/documentos/mis-documentos/:id/preview → cliente; inline si desbloqueado, 403 si bloqueado/confidencial
-GET  /api/casos/mis-casos · /api/citas/mis-citas   ← declarar ANTES de /:id
+PATCH /api/documentos/:id/toggle-bloqueo
+GET  /api/documentos/mis-documentos/:id/preview  → cliente; inline si desbloqueado
+GET  /api/documentos/mis-documentos/:id/descargar → cliente; path.resolve (absoluta)
+GET  /api/casos/mis-casos · /api/citas/mis-citas  ← declarar ANTES de /:id
 GET  /api/casos/:id/timeline         → apertura, documentos, citas, comentarios, movimientos
 POST /api/casos/:id/comentarios      → abogado/secretario; fire-and-forget email
-GET|POST /api/casos/:id/movimientos  → GET: todos los roles · POST: abogado/secretario + email
-POST /api/casos/:id/chat             → chat IA (abogado/secretario/cliente)
+GET|POST /api/casos/:id/movimientos  → GET todos los roles · POST abogado/secretario + email
+POST /api/casos/:id/chat             → chat IA (todos los roles autenticados)
 PATCH /api/citas/:id/estado          → { estado, fecha?, hora? }
 PATCH /api/citas/:id/rechazar        → estado='cancelada' + email al cliente
 GET  /api/stats/dashboard            → { totalClientes, casosActivos, citasHoy, pendientes }
@@ -74,27 +78,22 @@ text-primary: rgba(255,255,255,0.95) · text-secondary: rgba(255,255,255,0.55)
 
 ## Convenciones
 - Tailwind CSS v4 + PostCSS. Estilos inline `style={{}}` para CSS custom vars.
-- React Hook Form + Zod para formularios. Axios desde `services/axios.config.js`, **nunca** `context/axios.config.js` ni `fetch` directo (excepción: descarga de archivos usa fetch con `VITE_API_URL`).
-- `<select>` nativo — excepción: dropdowns framer-motion con `position:relative; zIndex` explícito.
-- Sin TypeScript. `translate="no"` en elementos con texto de UI.
-- Fechas: `getFullYear/Month/Date` locales, nunca `toISOString()`.
+- Axios desde `services/axios.config.js` — **nunca** `context/axios.config.js` ni `fetch` directo. Excepción: descargas de archivos usan `fetch` con `VITE_API_URL` + Bearer token.
+- Rutas de archivo: siempre `path.resolve('./uploads', nombre)` — nunca `path.join` (Express 4 requiere ruta absoluta en `res.download` / `res.sendFile`).
+- `<select>` nativo. Sin TypeScript. `translate="no"` en texto de UI.
+- Fechas: `getFullYear/Month/Date` locales — nunca `toISOString()`.
 - Responsive: `≤700px` portal cliente · `≤767px` panel admin.
-- **z-index + backdropFilter:** nuevo stacking context → contenedor padre necesita `position:relative; zIndex` mayor que overlays.
-
-## Responsive
-**`ClientNavbar.jsx`** — Mobile: logo + avatar + hamburguesa. Header 56px.
-**`MisCitasPage.jsx`** — Desktop: calendario 280px + panel. Mobile: vertical. Clases `.mc-layout/.mc-cal/.mc-detail/.mc-hdr`.
+- **z-index + backdropFilter:** contenedor padre necesita `position:relative; zIndex` explícito.
+- React Hook Form + Zod en formularios. `getCasoById` retorna `{ caso, cliente, citas }` — usar `res.data.caso`.
 
 ## Seguridad — 2FA por correo
-
-### Flujo registro → login
-1. Registro: Turnstile (solo en `NODE_ENV=production`) → usuario `activo:false` + token → email verificación
-2. Login paso 1: credenciales + `activo:true` → OTP 6 dígitos **10 min** → `{ requiresOtp, tempToken, maskedEmail }`
+1. Registro: Turnstile (solo `NODE_ENV=production`) → usuario `activo:false` + token → email
+2. Login paso 1: credenciales → OTP 6 dígitos **10 min** → `{ requiresOtp, tempToken, maskedEmail }`
 3. Login paso 2: `tempToken` + OTP → JWT **2h** · 3 intentos · `expired:true` redirige al login
 4. `verificarEmail` idempotente (tolera doble petición React StrictMode)
 
-### Funciones email — `emailService.js`
-Plantilla Navy/Gold. Todas las notificaciones son **fire-and-forget** (nunca bloquean HTTP).
+### Email — `emailService.js` (SendGrid HTTP API)
+Plantilla Navy/Gold. Todas las notificaciones son **fire-and-forget**.
 ```
 sendOtpEmail · sendVerificationEmail · sendResetRequestToAdmin · sendNewPasswordToClient
 notifyAdminNewUser · notifyNewCaseComment · notifyNuevoCasoAsignado · notifyDocumentoAdjunto
@@ -102,20 +101,15 @@ notifyNewAppointment(creadaPorAbogado) · notifyAppointmentRescheduled · update
 notifyAdminNuevaAsesoria · notifyAsesoriaRechazada · notifyMovimientoProcesal · notifyReporteIACaso
 ```
 
-### Flujos notificación de citas
-| Evento | Función | Receptor |
-|--------|---------|----------|
-| Cliente solicita cita | `notifyNewAppointment(false)` | Admins + cliente |
-| Abogado crea cita | `notifyNewAppointment(true)` | Abogado + cliente |
+| Evento cita | Función | Receptor |
+|-------------|---------|----------|
+| Cliente solicita | `notifyNewAppointment(false)` | Admins + cliente |
+| Abogado crea | `notifyNewAppointment(true)` | Abogado + cliente |
 | Abogado reagenda | `notifyAppointmentRescheduled` | Cliente |
-| Confirma / cancela | `updateAppointmentStatus` | Cliente |
-| Rechaza landing | `notifyAsesoriaRechazada` | Cliente |
-| Nueva desde landing | `notifyAdminNuevaAsesoria` | ADMIN_EMAIL |
+| Confirma/cancela | `updateAppointmentStatus` | Cliente |
 | Movimiento procesal | `notifyMovimientoProcesal` | Cliente |
 
-### Cloudflare Turnstile
-- **Test/dev:** site key `1x00000000000000000000AA` — captcha solo activo en `NODE_ENV=production`
-- **Producción:** `VITE_TURNSTILE_SITE_KEY` real (sin fallback al valor de test)
+**Turnstile:** dev `1x00000000000000000000AA` · producción: `VITE_TURNSTILE_SITE_KEY` real
 
 ## Variables de entorno
 
@@ -125,39 +119,97 @@ PORT=3001  DB_HOST=localhost  DB_PORT=3306  DB_NAME=despacho_juridico
 DB_USER=root  DB_PASSWORD=custom32
 JWT_SECRET=despacho_juridico_secret_2024
 NODE_ENV=development
-GMAIL_USER=osorioalexander640@gmail.com    GMAIL_PASS=<app_password>
 APP_URL=http://localhost:5173
-CORS_ORIGIN=http://localhost:5173,http://localhost:5174   # separados por coma
+CORS_ORIGIN=http://localhost:5173,http://localhost:5174
 TURNSTILE_SECRET=<secret_cloudflare>
 ADMIN_EMAIL=osorioalexander640@gmail.com
-ANTHROPIC_API_KEY=sk-ant-...    # opcional; sin key IA no aparece
+ANTHROPIC_API_KEY=sk-ant-...    # opcional; sin key la IA no aparece
+SENDGRID_API_KEY=<key>          # producción usa SendGrid
 ```
 
-### `frontend/.env` (desarrollo — ya creado)
+### `frontend/.env`
 ```
 VITE_API_URL=http://localhost:3001/api
 VITE_TURNSTILE_SITE_KEY=1x00000000000000000000AA
 ```
+Producción: `frontend/.env.production` con URLs reales (Vite lo aplica en `npm run build`).
 
-### `frontend/.env.production` (crear al desplegar)
+## Usuarios
+| Email | Rol | Entorno |
+|-------|-----|---------|
+| osorioalexander640@gmail.com | abogado | dev |
+| abogadoadmin89@gmail.com | abogado | producción |
+| secretario867@gmail.com | secretario | producción |
+
+## Features implementadas
+
+| Feature | Archivos clave |
+|---------|----------------|
+| **Auth 2FA** OTP 10min · JWT 2h · 3 intentos | `auth.controller.js` · `OtpPage.jsx` |
+| **Análisis Documental IA** auto al subir + botón "Resumen IA" | `aiService.js` · `DocumentosPage.jsx` · `MisCasosPage.jsx` |
+| **Timeline visual** apertura/docs/citas/comentarios/movimientos | `GET /api/casos/:id/timeline` · `CaseTimeline.jsx` |
+| **Historial en portal cliente** timeline por caso, sin comentarios internos | `MisCasosPage.jsx` · `toggleHistorial()` |
+| **Escalamiento urgencias** cron diario email abogados | `reminderWorker.js` |
+| **Movimientos procesales** abogado registra → email cliente | `Movimiento.js` · `CaseDetail.jsx` |
+| **Agente Monitoreo IA** job 07:00 MX → reporte BD + email | `jobMonitoreoIA` en `reminderWorker.js` |
+| **Chat IA por caso** Claude Haiku con contexto del caso | `POST /:id/chat` · `CaseDetail.jsx` |
+| **Candado Digital** docs bloqueados por defecto → abogado libera | `PATCH /:id/toggle-bloqueo` · `DocumentosPage.jsx` |
+| **Preview Documentos** bloqueado=modal difuminado · libre=PDF/imagen inline | `documents.routes.js` · `MisCasosPage.jsx` |
+| **Semáforo de Caso** rojo/amarillo/verde por urgencia y vencimiento | `calcularSemaforo()` en `MisCasosPage.jsx` |
+| **Solicitudes Landing** leads → tabla dashboard | `SolicitudesLandingPage.jsx` |
+| **Integración Landing** asesoria → cliente + cita pendiente + email admin | `landing.routes.js` |
+
+**SQL aplicado en producción (idempotente en `app.js` startup):**
+```sql
+ALTER TABLE casos ADD COLUMN reporte_ia TEXT NULL;
+ALTER TABLE casos ADD COLUMN reporte_ia_at DATETIME NULL;
+ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
 ```
-VITE_API_URL=https://TU-DOMINIO-BACKEND.com/api
-VITE_TURNSTILE_SITE_KEY=TU_CLAVE_REAL_DE_CLOUDFLARE
+
+## Despliegue — Producción ✅
+
+| Plataforma | Proyecto | URL |
+|------------|----------|-----|
+| Railway (backend + MySQL) | `compassionate-creativity` · cuenta `abogadoadmin89@gmail.com` | `despacho-juridico-production-1df7.up.railway.app` |
+| Vercel (frontend) | `despacho-juridico` · cuenta `abogadoadmin89@gmail.com` | `despacho-juridico-plum.vercel.app` |
+| Vercel (landing) | `despacho-landing` · cuenta `abogadoadmin89@gmail.com` | `despacho-landing-olive.vercel.app` |
+
+**Notas Railway:**
+- Root Directory: `backend/` · Start: `npm start`
+- `trust proxy 1` en `app.js` para rate-limit correcto
+- Email: SendGrid HTTP API (Gmail SMTP bloqueado en Railway). Sender verificado: `abogadoadmin89@gmail.com`
+- CORS_ORIGIN incluye frontend + landing
+
+**Notas Vercel:**
+- Frontend: `vercel.json` con rewrites SPA · `VITE_API_URL` y `VITE_TURNSTILE_SITE_KEY` configuradas
+- Landing: `vercel.json` SPA · `VITE_APP_BASE` apunta al frontend de producción
+- Imágenes (`fondo-clinica.jpg`) importadas como módulo en `LoginPage`, `RegisterPage`, `OtpPage`
+
+### Pendiente — Migración a Cloudinary ⚠️
+Railway usa **filesystem efímero**: los uploads se pierden en cada redeploy del backend.
 ```
-> Vite usa `.env.production` automáticamente al hacer `npm run build`.
+TODO: migrar documentos a Cloudinary
+  backend: reemplazar multer diskStorage por multer-storage-cloudinary
+  BD: columna `nombre` almacenará public_id de Cloudinary (no nombre de archivo local)
+  Preview/descarga: URLs firmadas de Cloudinary en lugar de res.sendFile/res.download
+  Env vars a agregar: CLOUDINARY_CLOUD_NAME · CLOUDINARY_API_KEY · CLOUDINARY_API_SECRET
+```
 
-## Usuarios de prueba
-| Email | Rol | Estado |
-|-------|-----|--------|
-| osorioalexander640@gmail.com | abogado | activo=1 |
-| alexa@gmail.com · alchw675@gmail.com | — | activo=1 |
+## Iconografía
+- **Frontend:** `lucide-react`. Dashboard: `Scale/CalendarDays/Users`. Auth: `ShieldCheck/ShieldAlert`.
+- **Dashboard cards:** `rgba(8,20,48,0.55)` + borde `rgba(197,160,89,0.22)` + icono `#c5a059` → `CARD_ICON_STYLE`.
+- **Correos:** íconos circulares `<table valign="middle">`. Puntos `&#9679;` dorado.
 
-## Usuarios de producción (despacho)
-Creados con `node backend/scripts/crearUsuarios.js` — contraseñas gestionadas fuera del repo.
-| Email | Rol | Nombre |
-|-------|-----|--------|
-| abogadoadmin89@gmail.com | abogado | Lic. Horacio Sánchez Cerino |
-| secretario867@gmail.com | secretario | Secretario Despacho |
+## Integración Landing → Dashboard
+1. `POST /api/landing/asesoria` → busca/crea cliente → cita `pendiente` → email admin
+2. Dashboard `/panel/solicitudes-landing`: badge "Nueva" (<24h) · sidebar `Globe` badge rojo
+3. Confirmar → `PATCH /:id/estado` · Rechazar → `PATCH /:id/rechazar` + email
+4. Contactar → dropdown framer-motion: WhatsApp `wa.me/52...` · Gmail `mailto:`
+5. `appLinks.js` — usa `VITE_APP_BASE` (env var); botones usan `window.location.href`
+
+## Notas de entrega
+- **Versión escuela (este repo):** IA completa — análisis documental, monitoreo, chat, semáforo, preview.
+- **Versión tío (fork sin IA):** sin `ANTHROPIC_API_KEY`, sin botones IA, sin job monitoreo.
 
 ## Agentes especializados (`.claude/agents/`)
 | Agente | Responsabilidad |
@@ -166,173 +218,13 @@ Creados con `node backend/scripts/crearUsuarios.js` — contraseñas gestionadas
 | `ui-gold-architect` | Identidad visual Navy/Gold/Glassmorphism |
 | `security-officer` | OTP, Turnstile, JWT, bcrypt |
 
-## Iconografía
-- **Frontend:** `lucide-react`. Dashboard: `Scale/CalendarDays/Users`. Auth: `ShieldCheck/ShieldAlert`.
-- **Dashboard cards:** `rgba(8,20,48,0.55)` + borde `rgba(197,160,89,0.22)` + icono `#c5a059` → constante `CARD_ICON_STYLE`.
-- **Correos:** íconos circulares con `<table valign="middle">`. Puntos `&#9679;` dorado.
-
-## Integración Landing Page → Dashboard
-1. Formulario Landing → `POST /api/landing/asesoria` → busca/crea cliente → cita `pendiente` → email admin
-2. Dashboard `/panel/solicitudes-landing`: badge "Nueva" (<24h) · sidebar `Globe` badge rojo
-3. **Confirmar** → `ConfirmarModal` → `PATCH /:id/estado` · **Rechazar** → `PATCH /:id/rechazar` + email
-4. **Contactar** → dropdown framer-motion: WhatsApp `wa.me/52...` · Gmail `mailto:`
-
-### Archivos clave Landing
-| Archivo | Descripción |
-|---------|-------------|
-| `backend/src/routes/landing.routes.js` | POST /api/landing/asesoria |
-| `backend/src/models/Appointment.js` | `belongsTo(Client, { as:'Cliente' })` — JOIN |
-| `frontend/src/features/landing/SolicitudesLandingPage.jsx` | Tabla + ConfirmarModal + Contactar |
-| `Landig-page/src/utils/appLinks.js` | URLs: `APP_REGISTRO`, `APP_LOGIN`, `APP_BASE` |
-| `Landig-page/vite.config.js` | Proxy `/api → :3001` · `strictPort:true` |
-
-### Navegación Landing → App
-- `appLinks.js` — fuente única; usa `VITE_APP_BASE` (env var) — ya configurado en Vercel con URL de producción
-- Botones usan `window.location.href` (puertos distintos, no react-router)
-- Spinner dorado si navegación tarda >300ms
-
-## Features implementadas
-
-| Feature | Descripción | Archivos clave |
-|---------|-------------|----------------|
-| **Auth 2FA** | Registro+verificación email → Login OTP 6 dígitos 10min · 3 intentos · JWT 2h | `auth.controller.js` · `OtpPage.jsx` |
-| **Análisis Documental IA** | Auto al subir (fire-and-forget). Botón "Resumen IA" en admin y portal cliente. Requiere `ANTHROPIC_API_KEY` | `aiService.js` · `DocumentosPage.jsx` · `MisCasosPage.jsx` |
-| **Timeline visual** | Tab "Historial" en CaseDetail — apertura, docs, citas, comentarios, movimientos | `GET /api/casos/:id/timeline` · `CaseTimeline.jsx` |
-| **Escalamiento urgencias** | Cron diario → email ⚠️ a abogados/secretarios por casos con fecha límite próxima | `reminderWorker.js` |
-| **Movimientos procesales** | Abogado registra → email instantáneo al cliente · visible en portal | `Movimiento.js` · tab "Movimientos" en `CaseDetail.jsx` |
-| **Agente Monitoreo IA** | Job 07:00 MX → analiza casos activos con Claude Haiku → reporte en BD + email abogado | `jobMonitoreoIA` en `reminderWorker.js` · tab "Análisis IA" |
-| **Chat IA por caso** | Pregunta libre → Claude Haiku responde con contexto del caso | `POST /:id/chat` · tab "Chat IA" en `CaseDetail.jsx` |
-| **Candado Digital** | Docs suben bloqueados por defecto → abogado libera → cliente descarga | `PATCH /:id/toggle-bloqueo` · botón candado en `DocumentosPage.jsx` |
-| **Preview Documentos** | Bloqueados: botón "Vista previa" → modal con contenido difuminado + candado + "Documento en revisión". Desbloqueados: botón "Ver" (inline PDF/imagen) + "Descargar" | `GET /mis-documentos/:id/preview` en `documents.routes.js` · `MisCasosPage.jsx` |
-| **Semáforo de Caso** | Indicador visual 🔴🟡🟢 en cada tarjeta del portal cliente. Rojo: urgente/vencido/≤3 días · Amarillo: 4-14 días o docs bloqueados · Verde: todo al día | `calcularSemaforo()` en `MisCasosPage.jsx` |
-| **Solicitudes Landing** | Leads desde landing → tabla de gestión en dashboard | `SolicitudesLandingPage.jsx` |
-| **Ciclo vida cliente** | Temporal (sin usuario) o permanente. `completarAsesoria` desactiva usuario al cerrar | `PATCH /:id/completar-asesoria` |
-| **Tracking origen** | `?source=landing` → campo `origen` en usuarios | `RegisterPage.jsx` · `auth.controller.js` |
-
-**SQL requerido en producción (ejecutar manualmente):**
-```sql
-ALTER TABLE casos ADD COLUMN reporte_ia TEXT NULL;
-ALTER TABLE casos ADD COLUMN reporte_ia_at DATETIME NULL;
-ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
-```
-
-## Checklist de Despliegue
-
-### Plataformas
-- Railway (backend + MySQL): proyecto `compassionate-creativity` — cuenta `abogadoadmin89@gmail.com`
-- Vercel (frontend): cuenta `abogadoadmin89@gmail.com` — proyecto `despacho-juridico`
-
-### URLs de producción
-- **Backend:** `https://despacho-juridico-production-1df7.up.railway.app`
-- **Frontend:** `https://despacho-juridico-plum.vercel.app`
-- **Landing:** `https://despacho-landing-olive.vercel.app`
-
-### Backend — Railway ✅ COMPLETO
-- [x] Repo `despacho-juridico` subido a GitHub
-- [x] Servicio `despacho-juridico` desplegado en Railway — Root Directory: `backend/` · Start: `npm start`
-- [x] MySQL agregado y conectado (`mysql.railway.internal`)
-- [x] Todas las variables de entorno configuradas (DB, JWT, Resend, Anthropic, Turnstile, CORS)
-- [x] Dominio público generado: `despacho-juridico-production-1df7.up.railway.app`
-- [x] SQL migraciones en `app.js` startup (idempotentes): `reporte_ia`, `reporte_ia_at`, `origen`
-- [x] `SENDGRID_API_KEY` configurada · `ADMIN_EMAIL=abogadoadmin89@gmail.com`
-- [x] `trust proxy 1` en `app.js` para rate-limit correcto detrás del proxy Railway (2026-04-10)
-- [x] Email migrado de Gmail SMTP (bloqueado en Railway) → SendGrid HTTP API (2026-04-10)
-  - Sender verificado: `abogadoadmin89@gmail.com` en SendGrid Single Sender Verification
-  - Envía a cualquier destinatario sin necesidad de dominio propio
-  - Para dominio propio: verificar Domain Authentication en SendGrid → agregar `SENDGRID_FROM_EMAIL` en Railway
-
-### Frontend — Vercel ✅ COMPLETO
-- [x] Cuenta Vercel creada con `abogadoadmin89@gmail.com`
-- [x] Proyecto `despacho-juridico` desplegado → Root Directory: `frontend`
-- [x] Variables: `VITE_API_URL` y `VITE_TURNSTILE_SITE_KEY` configuradas
-- [x] URL: `https://despacho-juridico-plum.vercel.app`
-- [x] `frontend/vercel.json` con rewrites SPA — 404 al recargar corregido (2026-04-10)
-- [x] Imágenes de fondo (`fondo-clinica.jpg`) importadas como módulo en `LoginPage`, `RegisterPage` y `OtpPage` (2026-04-10)
-
-### Landing — Vercel ✅ COMPLETO
-- [x] Proyecto `despacho-landing` desplegado en Vercel — cuenta `abogadoadmin89@gmail.com`
-- [x] URL: `https://despacho-landing-olive.vercel.app`
-- [x] `vercel.json` con rewrites SPA
-- [x] `appLinks.js` usa `VITE_APP_BASE` (env var) — apunta a frontend de producción
-- [x] `Contact.jsx` usa `VITE_API_URL` para fetch al backend
-- [x] Variables configuradas en Vercel: `VITE_APP_BASE` · `VITE_API_URL`
-- [x] `CORS_ORIGIN` en Railway actualizado con URL de landing (2026-04-10)
-
-### BD y otros
-- [x] Tablas `comentarios` y `movimientos` — creadas
-- [x] Campo `origen` en `usuarios` — implementado
-- [x] CORS configurado para URLs de producción: frontend + landing
-- [ ] Uploads: actualmente local en Railway (se pierden en redeploy) — migrar a Cloudinary en el futuro
-
-### Nota IA
-~$0.002/doc análisis · ~$0.001/caso/día monitoreo. Sin `ANTHROPIC_API_KEY` el sistema funciona igual, botones IA no aparecen.
-
----
-
-## Auditoría Pre-Despliegue ✓ (2026-04-09)
-
-Auditoria completada con agentes especializados. Hallazgos corregidos en esta sesión:
-
-### Correcciones aplicadas — Backend
-
-| Severidad | Archivo | Fix |
-|-----------|---------|-----|
-| CRITICAL | `app.js` | CORS restringido a `CORS_ORIGIN` (antes `*`) |
-| CRITICAL | `app.js` | `/uploads` eliminado como static — toda descarga requiere auth |
-| CRITICAL | `cases.controller.js` | Folio generado con `sequelize.transaction + LOCK.UPDATE`, 4 dígitos (`EXP-2025-0001`) |
-| HIGH | `auth.routes.js` | Rate-limit en `/registro` (10/15min) y `/verify-otp` (10/15min) |
-| HIGH | `auth.controller.js` | Turnstile solo activo en `NODE_ENV=production` (antes `!== 'test'`) |
-| HIGH | `auth.controller.js` | OTP update consolidado en 1 sola operación (antes 2 updates) |
-| HIGH | `auth.controller.js` | `adminResetPassword`: contraseña mínima 8 chars; email no incluye la contraseña |
-| HIGH | `appointments.controller.js` | `notifyNewAppointment` y `notifyAppointmentRescheduled` → fire-and-forget |
-| HIGH | `cases.controller.js` | `notifyNewCaseComment` → fire-and-forget |
-| MEDIUM | `emailService.js` | Subject OTP sin el código visible; "10 minutos" corregido (antes "15") |
-
-### Correcciones aplicadas — Frontend
-
-| Severidad | Archivo | Fix |
-|-----------|---------|-----|
-| CRITICAL | `context/axios.config.js` | Archivo duplicado redirigido al correcto con interceptores |
-| CRITICAL | `utils/constants.js` | `API_BASE_URL` usa `VITE_API_URL` (antes hardcodeado a localhost) |
-| CRITICAL | `DocumentosPage.jsx` | Descarga usa `VITE_API_URL`; maneja 401/403/error de red |
-| CRITICAL | `MisCasosPage.jsx` | Descarga usa `VITE_API_URL`; maneja 401/403/error de red |
-| HIGH | `AuthContext.jsx` | `JSON.parse` de localStorage protegido con try-catch |
-| HIGH | `AppRouter.jsx` | `ProtectedRoute` retorna pantalla oscura en lugar de `null` durante loading |
-
-### Pendientes menores (no bloquean despliegue)
-- ✅ `clients.controller.js` — `createCliente`: `activo:true` añadido al `User.create` — **corregido 2026-04-09**
-- ✅ `reminderWorker.js` — limpieza OTP migrada a `User.update` ORM; import `sequelize` eliminado — **corregido 2026-04-09**
-- ✅ `cases.controller.js` — paginación `getCasos` con cota máxima `Math.min(limit, 100)` — **corregido 2026-04-09**
-- ✅ `scripts/resetAdmin.js` — archivo no existía (eliminado previamente) — **verificado 2026-04-09**
-- ✅ `CaseDetail.jsx` — `.catch(() => {})` silenciado → `setMovimientos([])` — **corregido 2026-04-09**
-- ✅ Frontend: 14 `alert()` reemplazados por `Toast.jsx` (`AgendaPage`, `ClientsPage`, `CasesPage`, `DocumentosPage`, `MisCasosPage`, `UsuariosPendientesPage`) — **corregido 2026-04-09**
-- ✅ Google Fonts en `frontend/index.html` (Playfair Display + Inter) — **ya estaban correctamente ubicados**
-- ✅ `OtpPage.jsx` — botón "Reenviar OTP" implementado con cooldown 60s + endpoint `POST /api/auth/resend-otp` — **corregido 2026-04-09**
-- ✅ `VerificarEmailPage.jsx` — `useEffect` deps `[searchParams]` — **corregido 2026-04-09**
-
-## Notas de entrega
-
-### Versión escuela (este repo — original completo)
-Incluye toda la IA: análisis documental, monitoreo, chat por caso, semáforo, preview de docs.
-
-### Versión tío (fork sin IA)
-Copia del proyecto con la IA desactivada: sin `ANTHROPIC_API_KEY`, sin botones de análisis/chat IA, sin job de monitoreo. Todo lo demás igual. Mantener en repositorio separado.
-
----
-
 ## Roadmap comercial
+**Versión actual — $55,000–$65,000 MXN:** sistema base + 2FA + IA + timeline + movimientos + landing + semáforo + preview
 
-### Versión actual — $55,000–$65,000 MXN
-Sistema base · 2FA · IA documental + monitoreo + chat · Timeline · Movimientos procesales · Landing integrada · Semáforo de caso · Preview de documentos
+| Mejora | Descripción | Estimado |
+|--------|-------------|----------|
+| Centro de Notificaciones | Campana navbar cliente — doc subido, estado, movimiento, comentario | +$8,000–$12,000 |
+| Comentarios desde portal cliente | Comunicación bidireccional en el expediente | +$6,000–$9,000 |
+| Solicitud de documentos | Cliente pide doc → registro como movimiento + email abogado | +$4,000–$6,000 |
 
-### Mejoras propuestas (costo adicional)
-Funcionalidades identificadas para una versión más completa — requieren desarrollo adicional:
-
-| Propuesta | Descripción | Estimado |
-|-----------|-------------|----------|
-| **Centro de Notificaciones in-app** | Campana en navbar del cliente con badge de no leídas. Eventos: doc subido, estado cambiado, movimiento registrado, comentario nuevo. Actualmente solo llegan por email | +$8,000–$12,000 MXN |
-| **Comentarios desde portal cliente** | El cliente puede escribir mensajes en su caso (hoy solo abogado/secretario). El abogado recibe email fire-and-forget. Comunicación bidireccional dentro del expediente | +$6,000–$9,000 MXN |
-| **Solicitud de documentos** | El cliente pide un doc específico desde el portal ("necesito el contrato firmado"). Queda registrado como movimiento y llega email al abogado | +$4,000–$6,000 MXN |
-
-### Enterprise — hasta $120,000 MXN
-Facturación CFDI/SAT · App móvil nativa · Firma electrónica · Integración SCJN/PJF · Multi-despacho · Soporte 12 meses
+**Enterprise — hasta $120,000 MXN:** CFDI/SAT · App móvil · Firma electrónica · SCJN/PJF · Multi-despacho · Soporte 12 meses
