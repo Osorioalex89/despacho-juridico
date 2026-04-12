@@ -20,7 +20,7 @@ export const analizarDocumento = async ({ buffer, rutaArchivo, nombreArchivo, ti
     }
   }
 
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' })
 
   const parts = []
 
@@ -108,7 +108,7 @@ DOCUMENTOS:
 ${docText}`
 
   const model = genAI.getGenerativeModel({
-    model:             'gemini-2.0-flash',
+    model:             'gemini-2.0-flash-lite',
     systemInstruction,
   })
 
@@ -179,7 +179,7 @@ Responde con este JSON:
 
 Reglas: máximo 4 acciones recomendadas, máximo 3 alertas (array vacío si no hay). Riesgo alto si hay plazos próximos, contraparte activa o documentos urgentes.`
 
-  const model  = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+  const model  = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' })
   const result = await model.generateContent(prompt)
   const raw    = result.response.text()
   const match  = raw.match(/\{[\s\S]*\}/)
