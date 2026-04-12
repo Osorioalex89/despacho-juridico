@@ -34,7 +34,7 @@ import {
   notifyVencimientoCaso,
   notifyReporteIACaso,
 } from '../services/emailService.js'
-import { analizarCaso } from '../services/aiService.js'
+// aiService se importa dinámicamente en jobMonitoreoIA para evitar crash de startup
 
 // ── Utilidades ─────────────────────────────────────────────────────
 
@@ -319,6 +319,7 @@ const jobMonitoreoIA = async () => {
           }),
         ])
 
+        const { analizarCaso } = await import('../services/aiService.js')
         const reporte = await analizarCaso({ caso, movimientos, documentos, citas })
         await caso.update({ reporte_ia: JSON.stringify(reporte), reporte_ia_at: new Date() })
         analizados++
