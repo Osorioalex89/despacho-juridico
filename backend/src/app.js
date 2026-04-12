@@ -97,13 +97,24 @@ async function runMigrations() {
     CREATE TABLE IF NOT EXISTS chat_mensajes (
       id_mensaje   INT           NOT NULL AUTO_INCREMENT,
       id_caso      INT           NOT NULL,
+      id_usuario   INT           NULL,
       role         ENUM('user','assistant') NOT NULL,
       content      TEXT          NOT NULL,
       createdAt    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (id_mensaje),
-      INDEX idx_chat_caso (id_caso)
+      INDEX idx_chat_caso (id_caso),
+      INDEX idx_chat_usuario (id_usuario)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `)
+
+  // Agregar id_usuario a chat_mensajes si no existe (tablas ya creadas)
+  try {
+    await sequelize.query(`ALTER TABLE chat_mensajes ADD COLUMN id_usuario INT NULL AFTER id_caso`)
+    await sequelize.query(`ALTER TABLE chat_mensajes ADD INDEX idx_chat_usuario (id_usuario)`)
+  } catch (err) {
+    const isDuplicateColumn = err.original?.errno === 1060
+    if (!isDuplicateColumn) throw err
+  }
 
   console.log('[Migrations] Columnas y tablas verificadas.')
 }

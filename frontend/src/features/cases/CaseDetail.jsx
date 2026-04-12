@@ -518,7 +518,7 @@ export default function CaseDetail() {
                 background:'rgba(6,14,36,0.92)', backdropFilter:'blur(20px)',
                 border:'1px solid rgba(201,168,76,0.16)', borderRadius:'16px',
                 overflow:'hidden', boxShadow:'0 12px 40px rgba(0,0,0,0.45)',
-                display:'flex', flexDirection:'column', minHeight:'520px',
+                display:'flex', flexDirection:'column', height:'520px',
               }}>
                 {/* Header */}
                 <div style={{
@@ -555,7 +555,7 @@ export default function CaseDetail() {
                 </div>
 
                 {/* Mensajes */}
-                <div style={{ flex:1, overflowY:'auto', padding:'20px 20px', display:'flex', flexDirection:'column', gap:'10px', minHeight:'340px' }}>
+                <div style={{ flex:1, overflowY:'auto', padding:'20px 20px', display:'flex', flexDirection:'column', gap:'10px', minHeight:0 }}>
                   {chatHistory.length === 0 && (
                     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:'14px' }}>
                       <div style={{ width:'48px', height:'48px', borderRadius:'12px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.18)', display:'flex', alignItems:'center', justifyContent:'center' }}>

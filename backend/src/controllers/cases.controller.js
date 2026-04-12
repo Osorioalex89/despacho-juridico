@@ -397,7 +397,7 @@ export const getChatHistory = async (req, res) => {
     }
 
     const mensajes = await ChatMensaje.findAll({
-      where:  { id_caso: id },
+      where:  { id_caso: id, id_usuario: req.user.id },
       order:  [['createdAt', 'ASC']],
     })
 
@@ -444,8 +444,8 @@ export const chatCaso = async (req, res) => {
 
     // Persistir user + assistant en BD (fire-and-forget, no bloquea la respuesta)
     ChatMensaje.bulkCreate([
-      { id_caso: id, role: 'user',      content: pregunta.trim() },
-      { id_caso: id, role: 'assistant', content: respuesta },
+      { id_caso: id, id_usuario: req.user.id, role: 'user',      content: pregunta.trim() },
+      { id_caso: id, id_usuario: req.user.id, role: 'assistant', content: respuesta },
     ]).catch(err => console.error('chatCaso persist error:', err.message))
 
     res.json({ respuesta })
