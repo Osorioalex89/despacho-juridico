@@ -381,7 +381,7 @@ export const addMovimiento = async (req, res) => {
 
 // POST /api/casos/:id/chat — abogado/secretario/cliente
 export const chatCaso = async (req, res) => {
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.GOOGLE_AI_API_KEY) {
     return res.status(501).json({ message: 'IA no configurada' })
   }
   try {
