@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
@@ -147,6 +147,7 @@ export default function CaseDetail() {
   const [chatHistory,  setChatHistory]  = useState([])
   const [chatInput,    setChatInput]    = useState('')
   const [chatLoading,  setChatLoading]  = useState(false)
+  const chatTextareaRef = useRef(null)
 
   useEffect(() => {
     getCasoById(id)
@@ -485,6 +486,7 @@ export default function CaseDetail() {
             if (!chatInput.trim() || chatLoading) return
             const pregunta = chatInput.trim()
             setChatInput('')
+            if (chatTextareaRef.current) chatTextareaRef.current.value = ''
             const newHistory = [...chatHistory, { role:'user', content:pregunta }]
             setChatHistory(newHistory)
             setChatLoading(true)
@@ -562,16 +564,18 @@ export default function CaseDetail() {
                 {/* Input */}
                 <div style={{ padding:'16px 24px', borderTop:'1px solid rgba(255,255,255,0.06)', display:'flex', gap:'10px', alignItems:'flex-end' }}>
                   <textarea
+                    ref={chatTextareaRef}
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() } }}
                     placeholder="Pregunta sobre este expediente… (Enter para enviar)"
+                    disabled={chatLoading}
                     rows={2}
                     style={{
                       flex:1, resize:'none', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)',
                       borderRadius:'10px', padding:'10px 14px', color:'rgba(255,255,255,0.85)',
                       fontFamily:"'Inter',sans-serif", fontSize:'13px', lineHeight:1.5,
-                      outline:'none',
+                      outline:'none', opacity: chatLoading ? 0.5 : 1,
                     }}
                   />
                   <button
