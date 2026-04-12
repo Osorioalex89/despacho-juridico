@@ -129,11 +129,11 @@ export default function PanelLayout({ children }) {
         />
       )}
 
-      <div style={{ display: 'flex', minHeight: '100vh', background: '#020818' }}>
+      <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#020818' }}>
         <Sidebar isMobileOpen={sidebarOpen} onMobileClose={() => setSidebarOpen(false)} />
         <div
           className="pl-content-wrapper"
-          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflowY: 'auto', overflowX: 'hidden' }}
         >
           {children}
         </div>

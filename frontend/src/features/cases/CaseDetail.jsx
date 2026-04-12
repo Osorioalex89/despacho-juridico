@@ -294,7 +294,7 @@ export default function CaseDetail() {
       `}</style>
 
       <div style={{
-        flex:1, overflowY:'auto', minHeight:'100vh',
+        flex:1, minHeight:0,
         background:`
           radial-gradient(ellipse at 8% 15%, rgba(201,168,76,0.06) 0%, transparent 48%),
           radial-gradient(ellipse at 92% 85%, rgba(139,92,246,0.04) 0%, transparent 48%),
