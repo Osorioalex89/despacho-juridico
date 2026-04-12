@@ -185,15 +185,13 @@ ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
 - Landing: `vercel.json` SPA · `VITE_APP_BASE` apunta al frontend de producción
 - Imágenes (`fondo-clinica.jpg`) importadas como módulo en `LoginPage`, `RegisterPage`, `OtpPage`
 
-### Pendiente — Migración a Cloudinary ⚠️
-Railway usa **filesystem efímero**: los uploads se pierden en cada redeploy del backend.
-```
-TODO: migrar documentos a Cloudinary
-  backend: reemplazar multer diskStorage por multer-storage-cloudinary
-  BD: columna `nombre` almacenará public_id de Cloudinary (no nombre de archivo local)
-  Preview/descarga: URLs firmadas de Cloudinary en lugar de res.sendFile/res.download
-  Env vars a agregar: CLOUDINARY_CLOUD_NAME · CLOUDINARY_API_KEY · CLOUDINARY_API_SECRET
-```
+### Cloudinary — Migración completada ✅
+Los documentos se almacenan en Cloudinary (no en disco — Railway filesystem es efímero).
+- `multer.memoryStorage()` → buffer en RAM → upload a Cloudinary (`resource_type:'raw'`)
+- `nombre` en BD almacena el `public_id` de Cloudinary (`despacho-juridico/xxxxx`)
+- Preview/descarga: el backend hace proxy (fetch Cloudinary URL → pipe a cliente)
+- `aiService.js`: acepta `buffer` directamente (no lee disco); soporta legacy URL para reanalizar
+- **Env vars requeridas en Railway:** `CLOUDINARY_CLOUD_NAME` · `CLOUDINARY_API_KEY` · `CLOUDINARY_API_SECRET`
 
 ## Iconografía
 - **Frontend:** `lucide-react`. Dashboard: `Scale/CalendarDays/Users`. Auth: `ShieldCheck/ShieldAlert`.

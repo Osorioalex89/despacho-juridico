@@ -1,23 +1,37 @@
 import Anthropic from '@anthropic-ai/sdk'
-import fs        from 'fs'
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 /**
  * Analiza un documento legal con Claude Haiku.
+ * Acepta buffer (Cloudinary/memoryStorage) o rutaArchivo (legacy disco).
  * @returns {{ tipo, partes, fechasClave, puntosPrincipales, urgencia }}
  */
-export const analizarDocumento = async ({ rutaArchivo, nombreArchivo, tipoArchivo }) => {
+export const analizarDocumento = async ({ buffer, rutaArchivo, nombreArchivo, tipoArchivo }) => {
+  // Obtener buffer: desde parámetro directo o descargando desde URL de Cloudinary
+  let fileBuffer = buffer
+  if (!fileBuffer && rutaArchivo) {
+    // Soporte legacy: si rutaArchivo es una URL (Cloudinary), descargamos
+    if (rutaArchivo.startsWith('http')) {
+      const res  = await fetch(rutaArchivo)
+      fileBuffer = Buffer.from(await res.arrayBuffer())
+    } else {
+      // Ruta en disco (solo en entornos de desarrollo locales)
+      const { default: fs } = await import('fs')
+      fileBuffer = fs.readFileSync(rutaArchivo)
+    }
+  }
+
   const content = []
 
   if (tipoArchivo?.includes('pdf')) {
-    const data = fs.readFileSync(rutaArchivo).toString('base64')
+    const data = fileBuffer.toString('base64')
     content.push({
       type: 'document',
       source: { type: 'base64', media_type: 'application/pdf', data },
     })
   } else if (tipoArchivo?.startsWith('image/')) {
-    const data      = fs.readFileSync(rutaArchivo).toString('base64')
+    const data      = fileBuffer.toString('base64')
     const mediaType = tipoArchivo.includes('png') ? 'image/png'
                     : tipoArchivo.includes('gif') ? 'image/gif'
                     : tipoArchivo.includes('webp') ? 'image/webp'
@@ -27,9 +41,9 @@ export const analizarDocumento = async ({ rutaArchivo, nombreArchivo, tipoArchiv
       source: { type: 'base64', media_type: mediaType, data },
     })
   } else {
-    // Texto plano, Word, etc. — leer como texto (funciona para .txt; para .docx da texto parcial)
+    // Texto plano, Word, etc.
     let texto = ''
-    try { texto = fs.readFileSync(rutaArchivo, 'utf-8').slice(0, 8000) } catch { /* binario — ignorar */ }
+    try { texto = fileBuffer.toString('utf-8').slice(0, 8000) } catch { /* binario — ignorar */ }
     const cuerpo = texto
       ? `Contenido del archivo "${nombreArchivo}":\n\n${texto}`
       : `Archivo: "${nombreArchivo}" (tipo: ${tipoArchivo || 'desconocido'}). No se pudo leer el contenido binario; infiere del nombre.`
