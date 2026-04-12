@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react'
-import { getMisCasos, getMovimientos, chatCaso, getTimeline } from '../cases/casesService'
+import { useState, useEffect, useRef } from 'react'
+import { getMisCasos, getMovimientos, chatCaso, getTimeline, getChatHistory } from '../cases/casesService'
 import { useToast, Toast } from '../../components/ui/Toast'
+import { useAuth } from '../../context/AuthContext'
+import ReactMarkdown from 'react-markdown'
 import { getMisDocumentos }            from '../documents/documentsService'
 import {
   FolderOpen, Clock, CheckCircle, XCircle,
   AlertCircle, FileText, Calendar, CalendarDays,
   ChevronRight, ChevronDown, ChevronUp, Download, Lock, Eye,
-  Bell, Gavel, Scale, Users, Sparkles, Send, Loader2, MessageSquare, History
+  Bell, Gavel, Scale, Users, Sparkles, Send, Loader2, MessageSquare, History, X
 } from 'lucide-react'
 
 // ── Estado config premium ─────────────────────────────────────────
@@ -72,6 +74,7 @@ function Badge({ estado }) {
 
 export default function MisCasosPage() {
   const { toast, showToast } = useToast()
+  const { user } = useAuth()
   const [casos,        setCasos]        = useState([])
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState('')
@@ -81,28 +84,57 @@ export default function MisCasosPage() {
   const [loadingDocs,  setLoadingDocs]  = useState(false)
   const [movsPorCaso,  setMovsPorCaso]  = useState({})
   const [expandedIA,   setExpandedIA]   = useState(null)
-  const [chatPorCaso,  setChatPorCaso]  = useState({}) // { [id_caso]: { open, history, input, loading } }
-  const [previewDoc,       setPreviewDoc]       = useState(null) // { id, nombre, tipo, blobUrl }
-  const [timelinePorCaso,  setTimelinePorCaso]  = useState({}) // { [id_caso]: events[] }
-  const [tlLoadingPorCaso, setTlLoadingPorCaso] = useState({}) // { [id_caso]: bool }
-  const [tlAbierto,        setTlAbierto]        = useState({}) // { [id_caso]: bool }
+  const [previewDoc,       setPreviewDoc]       = useState(null)
+  const [timelinePorCaso,  setTimelinePorCaso]  = useState({})
+  const [tlLoadingPorCaso, setTlLoadingPorCaso] = useState({})
+  const [tlAbierto,        setTlAbierto]        = useState({})
 
-  const getChatState = (id) => chatPorCaso[id] || { open:false, history:[], input:'', loading:false }
-  const setChatState = (id, patch) => setChatPorCaso(prev => ({
-    ...prev, [id]: { ...getChatState(id), ...patch }
-  }))
+  // ── Chat IA modal ─────────────────────────────────────────────────
+  const [chatModal,       setChatModal]       = useState({ open:false, id_caso:null, folio:'', asunto:'' })
+  const [chatHistoryMap,  setChatHistoryMap]  = useState({}) // { [id_caso]: messages[] }
+  const [chatInput,       setChatInput]       = useState('')
+  const [chatLoading,     setChatLoading]     = useState(false)
+  const chatInputRef = useRef(null)
 
-  const sendClientChat = async (id_caso) => {
-    const cs = getChatState(id_caso)
-    if (!cs.input.trim() || cs.loading) return
-    const pregunta = cs.input.trim()
-    const newHistory = [...cs.history, { role:'user', content:pregunta }]
-    setChatState(id_caso, { input:'', history:newHistory, loading:true })
+  const userInitials = user?.nombre
+    ? user.nombre.split(' ').slice(0,2).map(n => n[0]).join('').toUpperCase()
+    : 'YO'
+
+  const openChatModal = (caso) => {
+    setChatModal({ open:true, id_caso:caso.id_caso, folio:caso.folio, asunto:caso.asunto })
+    setChatInput('')
+    // Cargar historial de BD si aún no se cargó
+    if (!chatHistoryMap[caso.id_caso]) {
+      getChatHistory(caso.id_caso)
+        .then(res => setChatHistoryMap(prev => ({
+          ...prev, [caso.id_caso]: res.data.mensajes.map(m => ({ role:m.role, content:m.content }))
+        })))
+        .catch(() => setChatHistoryMap(prev => ({ ...prev, [caso.id_caso]: [] })))
+    }
+    setTimeout(() => chatInputRef.current?.focus(), 100)
+  }
+
+  const closeChatModal = () => {
+    setChatModal({ open:false, id_caso:null, folio:'', asunto:'' })
+    setChatInput('')
+  }
+
+  const sendClientChat = async () => {
+    const { id_caso } = chatModal
+    if (!chatInput.trim() || chatLoading || !id_caso) return
+    const pregunta = chatInput.trim()
+    setChatInput('')
+    const history = chatHistoryMap[id_caso] || []
+    const newHistory = [...history, { role:'user', content:pregunta }]
+    setChatHistoryMap(prev => ({ ...prev, [id_caso]: newHistory }))
+    setChatLoading(true)
     try {
-      const r = await chatCaso(id_caso, { pregunta, historial:cs.history })
-      setChatState(id_caso, { history:[...newHistory, { role:'assistant', content:r.data.respuesta }], loading:false })
+      const r = await chatCaso(id_caso, { pregunta, historial: history.slice(-10) })
+      setChatHistoryMap(prev => ({ ...prev, [id_caso]: [...newHistory, { role:'assistant', content:r.data.respuesta }] }))
     } catch {
-      setChatState(id_caso, { history:[...newHistory, { role:'assistant', content:'Error al conectar con el asistente. Intenta de nuevo.' }], loading:false })
+      setChatHistoryMap(prev => ({ ...prev, [id_caso]: [...newHistory, { role:'assistant', content:'Error al conectar con el asistente. Intenta de nuevo.' }] }))
+    } finally {
+      setChatLoading(false)
     }
   }
 
@@ -699,77 +731,35 @@ export default function MisCasosPage() {
                               )
                             })()}
 
-                            {/* ── Chat IA ── */}
-                            {(() => {
-                              const cs = getChatState(caso.id_caso)
-                              return (
-                                <div style={{marginTop:'16px'}}>
-                                  <button
-                                    onClick={e=>{e.stopPropagation();setChatState(caso.id_caso,{open:!cs.open})}}
-                                    style={{display:'flex',alignItems:'center',gap:'6px',background:'none',border:'none',cursor:'pointer',padding:0,marginBottom: cs.open ? '10px' : 0}}
-                                  >
-                                    <Sparkles size={12} style={{color:'rgba(201,168,76,0.75)'}}/>
-                                    <span style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'2px',textTransform:'uppercase',color:'rgba(201,168,76,0.75)'}}>
-                                      Asistente IA {cs.open ? <ChevronDown size={10}/> : <ChevronRight size={10}/>}
-                                    </span>
-                                  </button>
-                                  {cs.open && (
-                                    <div style={{background:'rgba(8,20,48,0.6)',border:'1px solid rgba(201,168,76,0.12)',borderRadius:'10px',overflow:'hidden'}} onClick={e=>e.stopPropagation()}>
-                                      {/* Mensajes */}
-                                      <div style={{maxHeight:'260px',overflowY:'auto',padding:'12px 14px',display:'flex',flexDirection:'column',gap:'10px'}}>
-                                        {cs.history.length === 0 && (
-                                          <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'10px',opacity:0.5}}>
-                                            <MessageSquare size={16} style={{color:'rgba(201,168,76,0.4)',flexShrink:0}}/>
-                                            <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.4)',margin:0,lineHeight:1.5}}>
-                                              Pregunta sobre el estado de tu caso, documentos o próximas fechas.
-                                            </p>
-                                          </div>
-                                        )}
-                                        {cs.history.map((msg,i)=>(
-                                          <div key={i} style={{display:'flex',justifyContent:msg.role==='user'?'flex-end':'flex-start'}}>
-                                            <div style={{
-                                              maxWidth:'85%',padding:'8px 12px',
-                                              borderRadius:msg.role==='user'?'10px 10px 3px 10px':'10px 10px 10px 3px',
-                                              background:msg.role==='user'?'rgba(201,168,76,0.12)':'rgba(139,92,246,0.1)',
-                                              border:msg.role==='user'?'1px solid rgba(201,168,76,0.25)':'1px solid rgba(139,92,246,0.2)',
-                                            }}>
-                                              <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.82)',margin:0,lineHeight:1.55,whiteSpace:'pre-wrap'}}>
-                                                {msg.content}
-                                              </p>
-                                            </div>
-                                          </div>
-                                        ))}
-                                        {cs.loading && (
-                                          <div style={{display:'flex',justifyContent:'flex-start'}}>
-                                            <div style={{padding:'8px 12px',borderRadius:'10px 10px 10px 3px',background:'rgba(139,92,246,0.1)',border:'1px solid rgba(139,92,246,0.2)',display:'flex',alignItems:'center',gap:'6px'}}>
-                                              <Loader2 size={12} style={{color:'#C4B5FD',animation:'spin 1s linear infinite'}}/>
-                                              <span style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',color:'rgba(196,181,253,0.7)'}}>Consultando expediente…</span>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                      {/* Input */}
-                                      <div style={{padding:'10px 12px',borderTop:'1px solid rgba(255,255,255,0.05)',display:'flex',gap:'8px',alignItems:'center'}}>
-                                        <input
-                                          value={cs.input}
-                                          onChange={e=>setChatState(caso.id_caso,{input:e.target.value})}
-                                          onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();sendClientChat(caso.id_caso)}}}
-                                          placeholder="Escribe tu consulta…"
-                                          style={{flex:1,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:'8px',padding:'8px 12px',color:'rgba(255,255,255,0.82)',fontFamily:"'Inter',sans-serif",fontSize:'12px',outline:'none'}}
-                                        />
-                                        <button
-                                          onClick={()=>sendClientChat(caso.id_caso)}
-                                          disabled={!cs.input.trim()||cs.loading}
-                                          style={{width:'34px',height:'34px',borderRadius:'8px',flexShrink:0,background:cs.input.trim()&&!cs.loading?'rgba(201,168,76,0.15)':'rgba(255,255,255,0.03)',border:cs.input.trim()&&!cs.loading?'1px solid rgba(201,168,76,0.3)':'1px solid rgba(255,255,255,0.06)',color:cs.input.trim()&&!cs.loading?'#C9A84C':'rgba(255,255,255,0.15)',display:'flex',alignItems:'center',justifyContent:'center',cursor:cs.input.trim()&&!cs.loading?'pointer':'default',transition:'all 0.15s'}}
-                                        >
-                                          <Send size={13}/>
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              )
-                            })()}
+                            {/* ── Chat IA — botón que abre modal ── */}
+                            <div style={{marginTop:'16px'}} onClick={e=>e.stopPropagation()}>
+                              <button
+                                onClick={()=>openChatModal(caso)}
+                                style={{
+                                  display:'flex', alignItems:'center', gap:'7px',
+                                  background:'rgba(201,168,76,0.07)',
+                                  border:'1px solid rgba(201,168,76,0.22)',
+                                  borderRadius:'8px', padding:'7px 14px',
+                                  cursor:'pointer', transition:'all 0.15s',
+                                }}
+                                onMouseOver={e=>{e.currentTarget.style.background='rgba(201,168,76,0.13)';e.currentTarget.style.borderColor='rgba(201,168,76,0.38)'}}
+                                onMouseOut={e=>{e.currentTarget.style.background='rgba(201,168,76,0.07)';e.currentTarget.style.borderColor='rgba(201,168,76,0.22)'}}
+                              >
+                                <Scale size={13} style={{color:'#C9A84C',flexShrink:0}}/>
+                                <span style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',fontWeight:'600',color:'rgba(201,168,76,0.85)'}}>
+                                  Consultar Asistente IA
+                                </span>
+                                {(chatHistoryMap[caso.id_caso]?.length > 0) && (
+                                  <span style={{
+                                    fontFamily:"'Inter',sans-serif", fontSize:'10px',
+                                    background:'rgba(201,168,76,0.15)', borderRadius:'10px',
+                                    padding:'1px 7px', color:'rgba(201,168,76,0.7)',
+                                  }}>
+                                    {chatHistoryMap[caso.id_caso].length / 2 | 0} consultas
+                                  </span>
+                                )}
+                              </button>
+                            </div>
 
                           </div>
                           )
@@ -783,6 +773,146 @@ export default function MisCasosPage() {
           )}
         </div>
       </div>
+
+      {/* ── Modal Chat IA ── */}
+      {chatModal.open && (
+        <div
+          onClick={closeChatModal}
+          style={{ position:'fixed', inset:0, zIndex:1100, background:'rgba(2,8,24,0.88)', backdropFilter:'blur(10px)', display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }}
+        >
+          <style>{`
+            .mc-input:focus { border-color:rgba(201,168,76,0.55)!important; box-shadow:0 0 0 3px rgba(201,168,76,0.08); }
+            .mc-input::placeholder { color:rgba(255,255,255,0.22); }
+            @keyframes mcPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+          `}</style>
+          <div
+            onClick={e=>e.stopPropagation()}
+            style={{
+              width:'100%', maxWidth:'680px', height:'min(85vh,680px)',
+              background:'rgba(6,14,36,0.97)', backdropFilter:'blur(24px)',
+              border:'1px solid rgba(201,168,76,0.18)', borderRadius:'18px',
+              boxShadow:'0 24px 64px rgba(0,0,0,0.6)',
+              display:'flex', flexDirection:'column', overflow:'hidden',
+            }}
+          >
+            {/* Header */}
+            <div style={{ padding:'14px 18px', borderBottom:'1px solid rgba(201,168,76,0.1)', background:'rgba(201,168,76,0.03)', display:'flex', alignItems:'center', gap:'10px', flexShrink:0 }}>
+              <div style={{ width:'32px', height:'32px', borderRadius:'8px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.25)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <Scale size={15} style={{ color:'#C9A84C' }}/>
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'14px', fontWeight:'700', color:'rgba(255,255,255,0.92)', margin:0 }}>
+                  Asistente Jurídico IA
+                </p>
+                <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(201,168,76,0.55)', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                  {chatModal.folio} · {chatModal.asunto}
+                </p>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'4px', background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.18)', borderRadius:'20px', padding:'3px 9px' }}>
+                  <span style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#22C55E', animation:'mcPulse 2s ease infinite', display:'inline-block' }}/>
+                  <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(134,239,172,0.8)', fontWeight:'600' }}>En línea</span>
+                </div>
+                <button onClick={closeChatModal} style={{ width:'30px', height:'30px', borderRadius:'7px', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.5)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+                  <X size={14}/>
+                </button>
+              </div>
+            </div>
+
+            {/* Mensajes */}
+            <div style={{ flex:1, overflowY:'auto', padding:'18px', display:'flex', flexDirection:'column', gap:'10px' }}>
+              {(chatHistoryMap[chatModal.id_caso] || []).length === 0 && !chatLoading && (
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:'14px' }}>
+                  <div style={{ width:'48px', height:'48px', borderRadius:'12px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.18)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <Scale size={22} style={{ color:'rgba(201,168,76,0.5)' }}/>
+                  </div>
+                  <div style={{ textAlign:'center' }}>
+                    <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'14px', color:'rgba(255,255,255,0.4)', margin:'0 0 6px' }}>Asistente listo</p>
+                    <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.25)', margin:0, maxWidth:'280px', lineHeight:1.7 }}>
+                      Pregunta sobre el estado de tu caso, documentos pendientes, próximas citas o plazos.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {(chatHistoryMap[chatModal.id_caso] || []).map((msg, i) => (
+                <div key={i} style={{ display:'flex', flexDirection:'column', gap:'3px', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                  <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'600', letterSpacing:'0.8px', textTransform:'uppercase', color: msg.role === 'user' ? 'rgba(147,187,252,0.5)' : 'rgba(201,168,76,0.5)', paddingLeft: msg.role === 'user' ? 0 : '4px', paddingRight: msg.role === 'user' ? '4px' : 0 }}>
+                    {msg.role === 'user' ? userInitials : 'Asistente IA'}
+                  </span>
+                  <div style={{ width:'100%', maxWidth:'92%', display:'flex', alignItems:'flex-start', gap:'8px', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row' }}>
+                    <div style={{ flexShrink:0, width:'28px', height:'28px', borderRadius:'7px', display:'flex', alignItems:'center', justifyContent:'center', background: msg.role === 'user' ? 'rgba(59,130,246,0.15)' : 'rgba(201,168,76,0.1)', border: msg.role === 'user' ? '1px solid rgba(59,130,246,0.25)' : '1px solid rgba(201,168,76,0.22)' }}>
+                      {msg.role === 'user'
+                        ? <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'9px', fontWeight:'700', color:'#93BBFC' }}>{userInitials}</span>
+                        : <Scale size={12} style={{ color:'#C9A84C' }}/>
+                      }
+                    </div>
+                    <div style={{
+                      flex:1, padding:'10px 13px',
+                      borderRadius: msg.role === 'user' ? '11px 4px 11px 11px' : '4px 11px 11px 11px',
+                      background: msg.role === 'user' ? 'rgba(15,28,58,0.8)' : 'rgba(8,20,48,0.55)',
+                      backdropFilter: msg.role === 'assistant' ? 'blur(8px)' : 'none',
+                      ...(msg.role === 'assistant' ? {
+                        borderTop:'1px solid rgba(201,168,76,0.12)', borderBottom:'1px solid rgba(201,168,76,0.12)',
+                        borderRight:'1px solid rgba(201,168,76,0.12)', borderLeft:'3px solid rgba(201,168,76,0.5)',
+                      } : {
+                        borderTop:'1px solid rgba(147,187,252,0.1)', borderBottom:'1px solid rgba(147,187,252,0.1)',
+                        borderLeft:'1px solid rgba(147,187,252,0.1)', borderRight:'3px solid rgba(147,187,252,0.45)',
+                      }),
+                    }}>
+                      {msg.role === 'assistant' ? (
+                        <div style={{ fontFamily:"'Inter',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.88)', lineHeight:1.65 }} className="md-chat">
+                          <ReactMarkdown>{msg.content}</ReactMarkdown>
+                        </div>
+                      ) : (
+                        <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.85)', margin:0, lineHeight:1.6 }}>{msg.content}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div style={{ display:'flex', flexDirection:'column', gap:'3px', alignItems:'flex-start' }}>
+                  <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'600', letterSpacing:'0.8px', textTransform:'uppercase', color:'rgba(201,168,76,0.5)', paddingLeft:'4px' }}>Asistente IA</span>
+                  <div style={{ display:'flex', alignItems:'flex-start', gap:'8px' }}>
+                    <div style={{ flexShrink:0, width:'28px', height:'28px', borderRadius:'7px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.22)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <Scale size={12} style={{ color:'#C9A84C' }}/>
+                    </div>
+                    <div style={{ padding:'10px 14px', borderRadius:'4px 11px 11px 11px', borderTop:'1px solid rgba(201,168,76,0.1)', borderBottom:'1px solid rgba(201,168,76,0.1)', borderRight:'1px solid rgba(201,168,76,0.1)', borderLeft:'3px solid rgba(201,168,76,0.35)', background:'rgba(8,20,48,0.55)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', gap:'8px' }}>
+                      <Loader2 size={13} style={{ color:'#C9A84C', animation:'spin 1s linear infinite', flexShrink:0 }}/>
+                      <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(201,168,76,0.6)' }}>Consultando expediente…</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div style={{ padding:'12px 16px', borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', gap:'8px', alignItems:'flex-end', background:'rgba(6,14,36,0.6)', flexShrink:0 }}>
+              <textarea
+                ref={chatInputRef}
+                value={chatInput}
+                onChange={e=>setChatInput(e.target.value)}
+                onKeyDown={e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); sendClientChat() } }}
+                placeholder="Escribe tu consulta… (Enter para enviar)"
+                disabled={chatLoading}
+                rows={2}
+                className="mc-input"
+                style={{ flex:1, resize:'none', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.09)', borderRadius:'10px', padding:'9px 13px', color:'rgba(255,255,255,0.88)', fontFamily:"'Inter',sans-serif", fontSize:'13px', lineHeight:1.5, outline:'none', opacity: chatLoading ? 0.5 : 1, transition:'border-color 0.2s, box-shadow 0.2s' }}
+              />
+              <button
+                onClick={sendClientChat}
+                disabled={!chatInput.trim() || chatLoading}
+                style={{ width:'38px', height:'38px', borderRadius:'10px', flexShrink:0, background: chatInput.trim() && !chatLoading ? 'rgba(201,168,76,0.18)' : 'rgba(255,255,255,0.04)', border: chatInput.trim() && !chatLoading ? '1px solid rgba(201,168,76,0.4)' : '1px solid rgba(255,255,255,0.07)', color: chatInput.trim() && !chatLoading ? '#C9A84C' : 'rgba(255,255,255,0.18)', display:'flex', alignItems:'center', justifyContent:'center', cursor: chatInput.trim() && !chatLoading ? 'pointer' : 'default', transition:'all 0.15s' }}
+              >
+                <Send size={15}/>
+              </button>
+            </div>
+            <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.12)', margin:0, padding:'0 16px 10px', textAlign:'center' }}>
+              Respuestas generadas por IA · Verificar con tu abogado · Historial guardado en tu expediente
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Modal Preview de documentos ── */}
       {previewDoc && (
