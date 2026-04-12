@@ -22,7 +22,7 @@ export const getCasos = async (req, res) => {
         { asunto:  { [Op.like]: `%${search}%` } },
       ]
     }
-    if (tipo)   where.tipo   = tipo
+    if (tipo)   where.tipo   = { [Op.like]: tipo }
     if (estado) where.estado = estado
 
     const [{ count, rows }, statsRows] = await Promise.all([
