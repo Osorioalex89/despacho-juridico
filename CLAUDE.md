@@ -216,6 +216,18 @@ Los documentos se almacenan en Cloudinary (no en disco — Railway filesystem es
 | `ui-gold-architect` | Identidad visual Navy/Gold/Glassmorphism |
 | `security-officer` | OTP, Turnstile, JWT, bcrypt |
 
+## Pendientes técnicos
+
+### Persistencia del historial del Chat IA ⏳
+El historial del chat se pierde al refrescar — vive solo en estado React.
+```
+TODO: persistir chat IA en BD (Opción B — correcta)
+  BD: nueva tabla chat_mensajes → id_mensaje, id_caso, role[ENUM user|assistant], content[TEXT], createdAt
+  Backend: GET /api/casos/:id/chat-history · POST guarda cada mensaje al enviar/recibir
+  Frontend: cargar historial al montar CaseDetail, append en cada intercambio
+  Ventaja: accesible desde cualquier dispositivo, auditable, parte del expediente
+```
+
 ## Roadmap comercial
 **Versión actual — $55,000–$65,000 MXN:** sistema base + 2FA + IA + timeline + movimientos + landing + semáforo + preview
 
