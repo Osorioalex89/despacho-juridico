@@ -11,6 +11,10 @@ const ChatMensaje = sequelize.define('ChatMensaje', {
     type:      DataTypes.INTEGER,
     allowNull: false,
   },
+  id_usuario: {
+    type:      DataTypes.INTEGER,
+    allowNull: true,
+  },
   role: {
     type:      DataTypes.ENUM('user', 'assistant'),
     allowNull: false,
