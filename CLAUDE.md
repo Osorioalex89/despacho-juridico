@@ -123,7 +123,7 @@ APP_URL=http://localhost:5173
 CORS_ORIGIN=http://localhost:5173,http://localhost:5174
 TURNSTILE_SECRET=<secret_cloudflare>
 ADMIN_EMAIL=osorioalexander640@gmail.com
-ANTHROPIC_API_KEY=sk-ant-...    # opcional; sin key la IA no aparece
+GOOGLE_AI_API_KEY=AIza...        # opcional; sin key la IA no aparece · modelo: gemini-2.0-flash
 SENDGRID_API_KEY=<key>          # producción usa SendGrid
 ```
 
@@ -207,7 +207,7 @@ Los documentos se almacenan en Cloudinary (no en disco — Railway filesystem es
 
 ## Notas de entrega
 - **Versión escuela (este repo):** IA completa — análisis documental, monitoreo, chat, semáforo, preview.
-- **Versión tío (fork sin IA):** sin `ANTHROPIC_API_KEY`, sin botones IA, sin job monitoreo.
+- **Versión tío (fork sin IA):** sin `GOOGLE_AI_API_KEY`, sin botones IA, sin job monitoreo.
 
 ## Agentes especializados (`.claude/agents/`)
 | Agente | Responsabilidad |
