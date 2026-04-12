@@ -5,9 +5,8 @@ import {
   getDocumentos, uploadDocumento,
   deleteDocumento, descargarDocumento, reanalizar, toggleBloqueo
 } from '../controllers/documents.controller.js'
-import Document from '../models/Document.js'
-import fs       from 'fs'
-import path     from 'path'
+import Document   from '../models/Document.js'
+import cloudinary from '../config/cloudinary.js'
 const router = Router()
 router.use(verifyToken)
 
@@ -65,15 +64,19 @@ router.get('/mis-documentos/:id/descargar', requireRole('cliente'), async (req, 
     if (doc.bloqueado) {
       return res.status(403).json({ message: 'Este documento aún no está disponible para descarga' })
     }
-    const filePath = path.resolve('./uploads', doc.nombre)
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).json({ message: 'Archivo no encontrado en el servidor' })
+    const url      = cloudinary.url(doc.nombre, { resource_type: 'raw', secure: true })
+    const response = await fetch(url)
+    if (!response.ok) {
+      return res.status(404).json({ message: 'Archivo no encontrado' })
     }
-    res.download(filePath, doc.nombre_original)
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.nombre_original)}"`)
+    res.setHeader('Content-Type', doc.tipo || 'application/octet-stream')
+    response.body.pipe(res)
   } catch (error) {
     res.status(500).json({ message: 'Error interno del servidor' })
   }
 })
+
 // Cliente hace preview de su propio documento (inline en el navegador)
 router.get('/mis-documentos/:id/preview', requireRole('cliente'), async (req, res) => {
   try {
@@ -87,13 +90,14 @@ router.get('/mis-documentos/:id/preview', requireRole('cliente'), async (req, re
     if (doc.bloqueado) {
       return res.status(403).json({ bloqueado: true, message: 'Documento pendiente de revisión por el abogado' })
     }
-    const absolutePath = path.resolve('./uploads', doc.nombre)
-    if (!fs.existsSync(absolutePath)) {
-      return res.status(404).json({ message: 'Archivo no encontrado en el servidor' })
+    const url      = cloudinary.url(doc.nombre, { resource_type: 'raw', secure: true })
+    const response = await fetch(url)
+    if (!response.ok) {
+      return res.status(404).json({ message: 'Archivo no encontrado' })
     }
     res.setHeader('Content-Type', doc.tipo)
     res.setHeader('Content-Disposition', `inline; filename="${doc.nombre_original}"`)
-    res.sendFile(absolutePath)
+    response.body.pipe(res)
   } catch (error) {
     console.error('Error en preview de documento:', error.message)
     res.status(500).json({ message: 'Error interno' })
