@@ -11,7 +11,8 @@ const VISION_MODEL = 'llama-3.2-11b-vision-preview'
  */
 const extractPdfText = async (buffer) => {
   try {
-    const { default: pdfParse } = await import('pdf-parse')
+    // Importar solo la librería core para evitar el bug de test-files en producción
+    const { default: pdfParse } = await import('pdf-parse/lib/pdf-parse.js')
     const data = await pdfParse(buffer)
     return data.text?.slice(0, 8000) || ''
   } catch {
