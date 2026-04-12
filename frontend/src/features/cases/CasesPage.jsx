@@ -387,7 +387,6 @@ export default function CasesPage() {
             border: '1px solid rgba(201,168,76,0.16)',
             borderRadius: '16px',
             boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)',
-            overflow: 'hidden',
             animationDelay: '0.18s',
           }}>
 
@@ -496,6 +495,9 @@ export default function CasesPage() {
                 ))}
               </div>
             </div>
+
+            {/* Table wrapper — overflow hidden solo aquí para esquinas redondeadas */}
+            <div style={{ overflow: 'hidden', borderRadius: '0 0 16px 16px' }}>
 
             {/* Column headers */}
             <div style={{
@@ -714,6 +716,7 @@ export default function CasesPage() {
                 </div>
               </div>
             )}
+            </div>{/* /table wrapper */}
           </div>
         </div>
       </div>
