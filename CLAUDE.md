@@ -18,7 +18,7 @@ Sin orquestador raíz. Nodemon no recarga `.env` — reiniciar manualmente al ca
 **Landing** `Landig-page/src/`: Vite + React · proxy `/api → :3001` · `organisms/` · framer-motion
 
 ### Dependencias
-`framer-motion` · `lucide-react` · `react-hook-form` + `zod` · `@turnstile/react`
+`framer-motion` · `lucide-react` · `react-hook-form` + `zod` · `@turnstile/react` · `react-markdown`
 
 ### Base de datos — `despacho_juridico`
 ```
@@ -152,7 +152,7 @@ Producción: `frontend/.env.production` con URLs reales (Vite lo aplica en `npm 
 | **Escalamiento urgencias** cron diario email abogados | `reminderWorker.js` |
 | **Movimientos procesales** abogado registra → email cliente | `Movimiento.js` · `CaseDetail.jsx` |
 | **Agente Monitoreo IA** job 07:00 MX → reporte BD + email | `jobMonitoreoIA` en `reminderWorker.js` |
-| **Chat IA por caso** Claude Haiku con contexto del caso | `POST /:id/chat` · `CaseDetail.jsx` |
+| **Chat IA por caso** Claude Haiku con contexto del caso; respuestas con `react-markdown` (negritas, listas, encabezados gold) | `POST /:id/chat` · `CaseDetail.jsx` |
 | **Candado Digital** docs bloqueados por defecto → abogado libera | `PATCH /:id/toggle-bloqueo` · `DocumentosPage.jsx` |
 | **Preview Documentos** bloqueado=modal difuminado · libre=PDF/imagen inline | `documents.routes.js` · `MisCasosPage.jsx` |
 | **Semáforo de Caso** rojo/amarillo/verde por urgencia y vencimiento | `calcularSemaforo()` en `MisCasosPage.jsx` |
