@@ -131,7 +131,7 @@ function InfoRow({ label, value, icon: Icon }) {
 export default function CaseDetail() {
   const { id }   = useParams()
   const navigate = useNavigate()
-  const { canEditCases } = useAuth()
+  const { canEditCases, user } = useAuth()
 
   const [caso,         setCaso]         = useState(null)
   const [cliente,      setCliente]      = useState(null)
@@ -504,83 +504,161 @@ export default function CaseDetail() {
               setChatLoading(false)
             }
           }
+          const userInitials = user?.nombre
+            ? user.nombre.split(' ').slice(0,2).map(n => n[0]).join('').toUpperCase()
+            : 'YO'
           return (
             <div style={{ maxWidth:'720px' }}>
+              <style>{`
+                .chat-input-field:focus { border-color: rgba(201,168,76,0.55) !important; box-shadow: 0 0 0 3px rgba(201,168,76,0.08); }
+                .chat-input-field::placeholder { color: rgba(255,255,255,0.22); }
+                @keyframes chatPulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+              `}</style>
               <div style={{
-                background:'rgba(8,20,48,0.75)', backdropFilter:'blur(16px)',
-                border:'1px solid rgba(201,168,76,0.14)', borderRadius:'16px',
-                overflow:'hidden', boxShadow:'0 8px 32px rgba(0,0,0,0.35)',
-                display:'flex', flexDirection:'column', minHeight:'480px',
+                background:'rgba(6,14,36,0.92)', backdropFilter:'blur(20px)',
+                border:'1px solid rgba(201,168,76,0.16)', borderRadius:'16px',
+                overflow:'hidden', boxShadow:'0 12px 40px rgba(0,0,0,0.45)',
+                display:'flex', flexDirection:'column', minHeight:'520px',
               }}>
                 {/* Header */}
-                <div style={{ padding:'16px 24px', borderBottom:'1px solid rgba(201,168,76,0.1)', display:'flex', alignItems:'center', gap:'10px' }}>
-                  <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    <Sparkles size={14} style={{ color:'rgba(201,168,76,0.8)' }}/>
+                <div style={{
+                  padding:'14px 20px',
+                  borderBottom:'1px solid rgba(201,168,76,0.1)',
+                  display:'flex', alignItems:'center', justifyContent:'space-between',
+                  background:'rgba(201,168,76,0.03)',
+                }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                    <div style={{
+                      width:'32px', height:'32px', borderRadius:'8px', flexShrink:0,
+                      background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.25)',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                    }}>
+                      <Scale size={15} style={{ color:'#C9A84C' }}/>
+                    </div>
+                    <div>
+                      <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'14px', fontWeight:'700', color:'rgba(255,255,255,0.92)', margin:0 }}>
+                        Asistente Jurídico IA
+                      </p>
+                      <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(201,168,76,0.55)', margin:0, letterSpacing:'0.5px' }}>
+                        {caso?.folio} · Expediente activo
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'15px', fontWeight:'700', color:'rgba(255,255,255,0.92)', margin:0 }}>
-                      Asistente IA — {caso?.folio}
-                    </p>
-                    <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.35)', margin:0 }}>
-                      Consulta sobre este expediente en lenguaje natural
-                    </p>
+                  <div style={{
+                    display:'flex', alignItems:'center', gap:'5px',
+                    background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.18)',
+                    borderRadius:'20px', padding:'3px 10px',
+                  }}>
+                    <span style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#22C55E', animation:'chatPulse 2s ease infinite', display:'inline-block' }}/>
+                    <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(134,239,172,0.8)', fontWeight:'600' }}>En línea</span>
                   </div>
                 </div>
 
                 {/* Mensajes */}
-                <div style={{ flex:1, overflowY:'auto', padding:'20px 24px', display:'flex', flexDirection:'column', gap:'14px', minHeight:'320px' }}>
+                <div style={{ flex:1, overflowY:'auto', padding:'20px 20px', display:'flex', flexDirection:'column', gap:'10px', minHeight:'340px' }}>
                   {chatHistory.length === 0 && (
-                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:'12px', opacity:0.5 }}>
-                      <MessageSquare size={28} style={{ color:'rgba(201,168,76,0.4)' }}/>
-                      <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.4)', margin:0, textAlign:'center', maxWidth:'260px', lineHeight:1.6 }}>
-                        Pregunta sobre el caso, movimientos, documentos o plazos. El asistente tiene acceso al expediente completo.
-                      </p>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:'14px' }}>
+                      <div style={{ width:'48px', height:'48px', borderRadius:'12px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.18)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <Scale size={22} style={{ color:'rgba(201,168,76,0.5)' }}/>
+                      </div>
+                      <div style={{ textAlign:'center' }}>
+                        <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'14px', color:'rgba(255,255,255,0.4)', margin:'0 0 6px' }}>Asistente listo</p>
+                        <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.25)', margin:0, maxWidth:'280px', lineHeight:1.7 }}>
+                          Pregunta sobre el caso, movimientos, documentos o plazos. El asistente tiene acceso al expediente completo.
+                        </p>
+                      </div>
                     </div>
                   )}
                   {chatHistory.map((msg, i) => (
-                    <div key={i} style={{ display:'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                    <div key={i} style={{ display:'flex', flexDirection:'column', gap:'4px', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                      {/* Etiqueta */}
+                      <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'600', letterSpacing:'0.8px', textTransform:'uppercase', color: msg.role === 'user' ? 'rgba(147,187,252,0.5)' : 'rgba(201,168,76,0.5)', paddingLeft: msg.role === 'user' ? 0 : '6px', paddingRight: msg.role === 'user' ? '6px' : 0 }}>
+                        {msg.role === 'user' ? userInitials : 'Asistente IA'}
+                      </span>
+                      {/* Tarjeta */}
                       <div style={{
-                        maxWidth:'80%', padding:'10px 14px', borderRadius: msg.role === 'user' ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
-                        background: msg.role === 'user' ? 'rgba(201,168,76,0.14)' : 'rgba(139,92,246,0.1)',
-                        border: msg.role === 'user' ? '1px solid rgba(201,168,76,0.28)' : '1px solid rgba(139,92,246,0.22)',
+                        width:'100%', maxWidth:'94%',
+                        display:'flex', alignItems:'flex-start', gap:'10px',
+                        flexDirection: msg.role === 'user' ? 'row-reverse' : 'row',
                       }}>
-                        {msg.role === 'assistant' ? (
-                          <div style={{ fontFamily:"'Inter',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.85)', lineHeight:1.6 }} className="md-chat">
-                            <ReactMarkdown>{msg.content}</ReactMarkdown>
-                          </div>
-                        ) : (
-                          <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.85)', margin:0, lineHeight:1.6 }}>
-                            {msg.content}
-                          </p>
-                        )}
+                        {/* Avatar */}
+                        <div style={{ flexShrink:0, width:'30px', height:'30px', borderRadius:'8px', display:'flex', alignItems:'center', justifyContent:'center',
+                          background: msg.role === 'user' ? 'rgba(59,130,246,0.15)' : 'rgba(201,168,76,0.1)',
+                          border: msg.role === 'user' ? '1px solid rgba(59,130,246,0.25)' : '1px solid rgba(201,168,76,0.22)',
+                        }}>
+                          {msg.role === 'user'
+                            ? <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'700', color:'#93BBFC' }}>{userInitials}</span>
+                            : <Scale size={13} style={{ color:'#C9A84C' }}/>
+                          }
+                        </div>
+                        {/* Contenido */}
+                        <div style={{
+                          flex:1, padding:'11px 14px',
+                          borderRadius: msg.role === 'user' ? '12px 4px 12px 12px' : '4px 12px 12px 12px',
+                          background: msg.role === 'user' ? 'rgba(15,28,58,0.8)' : 'rgba(8,20,48,0.55)',
+                          backdropFilter: msg.role === 'assistant' ? 'blur(8px)' : 'none',
+                          boxShadow: msg.role === 'assistant' ? '0 4px 16px rgba(0,0,0,0.25)' : 'none',
+                          ...(msg.role === 'assistant' ? {
+                            borderTop:    '1px solid rgba(201,168,76,0.12)',
+                            borderBottom: '1px solid rgba(201,168,76,0.12)',
+                            borderRight:  '1px solid rgba(201,168,76,0.12)',
+                            borderLeft:   '3px solid rgba(201,168,76,0.5)',
+                          } : {
+                            borderTop:    '1px solid rgba(147,187,252,0.1)',
+                            borderBottom: '1px solid rgba(147,187,252,0.1)',
+                            borderLeft:   '1px solid rgba(147,187,252,0.1)',
+                            borderRight:  '3px solid rgba(147,187,252,0.45)',
+                          }),
+                        }}>
+                          {msg.role === 'assistant' ? (
+                            <div style={{ fontFamily:"'Inter',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.88)', lineHeight:1.65 }} className="md-chat">
+                              <ReactMarkdown>{msg.content}</ReactMarkdown>
+                            </div>
+                          ) : (
+                            <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.85)', margin:0, lineHeight:1.6 }}>
+                              {msg.content}
+                            </p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
                   {chatLoading && (
-                    <div style={{ display:'flex', justifyContent:'flex-start' }}>
-                      <div style={{ padding:'10px 14px', borderRadius:'12px 12px 12px 4px', background:'rgba(139,92,246,0.1)', border:'1px solid rgba(139,92,246,0.22)', display:'flex', alignItems:'center', gap:'8px' }}>
-                        <Loader2 size={13} style={{ color:'#C4B5FD', animation:'spin 1s linear infinite' }}/>
-                        <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(196,181,253,0.7)' }}>Analizando expediente…</span>
+                    <div style={{ display:'flex', flexDirection:'column', gap:'4px', alignItems:'flex-start' }}>
+                      <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'600', letterSpacing:'0.8px', textTransform:'uppercase', color:'rgba(201,168,76,0.5)', paddingLeft:'6px' }}>Asistente IA</span>
+                      <div style={{ display:'flex', alignItems:'flex-start', gap:'10px' }}>
+                        <div style={{ flexShrink:0, width:'30px', height:'30px', borderRadius:'8px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.22)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                          <Scale size={13} style={{ color:'#C9A84C' }}/>
+                        </div>
+                        <div style={{ padding:'11px 16px', borderRadius:'4px 12px 12px 12px', borderLeft:'3px solid rgba(201,168,76,0.35)', background:'rgba(8,20,48,0.55)', backdropFilter:'blur(8px)', border:'1px solid rgba(201,168,76,0.1)', display:'flex', alignItems:'center', gap:'8px' }}>
+                          <Loader2 size={13} style={{ color:'#C9A84C', animation:'spin 1s linear infinite', flexShrink:0 }}/>
+                          <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(201,168,76,0.6)' }}>Analizando expediente…</span>
+                        </div>
                       </div>
                     </div>
                   )}
                 </div>
 
                 {/* Input */}
-                <div style={{ padding:'16px 24px', borderTop:'1px solid rgba(255,255,255,0.06)', display:'flex', gap:'10px', alignItems:'flex-end' }}>
+                <div style={{ padding:'14px 20px', borderTop:'1px solid rgba(255,255,255,0.05)', display:'flex', gap:'10px', alignItems:'flex-end', background:'rgba(6,14,36,0.5)' }}>
                   <textarea
                     ref={chatTextareaRef}
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat() } }}
-                    placeholder="Pregunta sobre este expediente… (Enter para enviar)"
+                    placeholder="Escribe tu consulta… (Enter para enviar)"
                     disabled={chatLoading}
                     rows={2}
+                    className="chat-input-field"
                     style={{
-                      flex:1, resize:'none', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)',
-                      borderRadius:'10px', padding:'10px 14px', color:'rgba(255,255,255,0.85)',
+                      flex:1, resize:'none',
+                      background:'rgba(255,255,255,0.04)',
+                      border:'1px solid rgba(255,255,255,0.09)',
+                      borderRadius:'10px', padding:'10px 14px',
+                      color:'rgba(255,255,255,0.88)',
                       fontFamily:"'Inter',sans-serif", fontSize:'13px', lineHeight:1.5,
                       outline:'none', opacity: chatLoading ? 0.5 : 1,
+                      transition:'border-color 0.2s ease, box-shadow 0.2s ease',
                     }}
                   />
                   <button
@@ -589,17 +667,18 @@ export default function CaseDetail() {
                     style={{
                       width:'40px', height:'40px', borderRadius:'10px', flexShrink:0,
                       background: chatInput.trim() && !chatLoading ? 'rgba(201,168,76,0.18)' : 'rgba(255,255,255,0.04)',
-                      border: chatInput.trim() && !chatLoading ? '1px solid rgba(201,168,76,0.35)' : '1px solid rgba(255,255,255,0.08)',
-                      color: chatInput.trim() && !chatLoading ? '#C9A84C' : 'rgba(255,255,255,0.2)',
-                      display:'flex', alignItems:'center', justifyContent:'center', cursor: chatInput.trim() && !chatLoading ? 'pointer' : 'default',
+                      border: chatInput.trim() && !chatLoading ? '1px solid rgba(201,168,76,0.4)' : '1px solid rgba(255,255,255,0.07)',
+                      color: chatInput.trim() && !chatLoading ? '#C9A84C' : 'rgba(255,255,255,0.18)',
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      cursor: chatInput.trim() && !chatLoading ? 'pointer' : 'default',
                       transition:'all 0.15s ease',
                     }}
                   >
-                    <Send size={16}/>
+                    <Send size={15}/>
                   </button>
                 </div>
-                <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.15)', margin:'0', padding:'0 24px 14px', textAlign:'center' }}>
-                  Respuestas generadas por IA · Verificar con criterio profesional · Historial no se guarda
+                <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.13)', margin:0, padding:'0 20px 12px', textAlign:'center' }}>
+                  Respuestas generadas por IA · Verificar con criterio profesional · Historial guardado en el expediente
                 </p>
               </div>
             </div>
