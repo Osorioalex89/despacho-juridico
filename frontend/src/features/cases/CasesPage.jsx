@@ -86,17 +86,18 @@ export default function CasesPage() {
   const { canEditCases } = useAuth()
   const navigate = useNavigate()
 
-  const [casos,        setCasos]        = useState([])
-  const [loading,      setLoading]      = useState(true)
-  const [search,       setSearch]       = useState('')
-  const [filtroTipo,   setFiltroTipo]   = useState('')
-  const [filtroEstado, setFiltroEstado] = useState('')
-  const [page,         setPage]         = useState(1)
-  const [totalPaginas, setTotalPaginas] = useState(1)
-  const [total,        setTotal]        = useState(0)
-  const [error,        setError]        = useState('')
-  const [deleteId,     setDeleteId]     = useState(null)
-  const [showTipoMenu, setShowTipoMenu] = useState(false)
+  const [casos,          setCasos]          = useState([])
+  const [loading,        setLoading]        = useState(true)
+  const [search,         setSearch]         = useState('')
+  const [filtroTipo,     setFiltroTipo]     = useState('')
+  const [filtroEstado,   setFiltroEstado]   = useState('')
+  const [page,           setPage]           = useState(1)
+  const [totalPaginas,   setTotalPaginas]   = useState(1)
+  const [total,          setTotal]          = useState(0)
+  const [statsPorEstado, setStatsPorEstado] = useState({})
+  const [error,          setError]          = useState('')
+  const [deleteId,       setDeleteId]       = useState(null)
+  const [showTipoMenu,   setShowTipoMenu]   = useState(false)
 
   const fetchCasos = async () => {
     setLoading(true)
@@ -107,6 +108,7 @@ export default function CasesPage() {
       setCasos(res.data.casos)
       setTotalPaginas(res.data.totalPaginas)
       setTotal(res.data.total)
+      if (res.data.statsPorEstado) setStatsPorEstado(res.data.statsPorEstado)
     } catch {
       setError('Error al cargar los casos')
     } finally {
@@ -125,8 +127,8 @@ export default function CasesPage() {
     } catch { showToast('Error al eliminar') }
   }
 
-  // Conteo por estado para las stat cards
-  const countByEstado = (e) => casos.filter(c => c.estado === e).length
+  // Conteo global por estado (independiente de filtros activos)
+  const countByEstado = (e) => statsPorEstado[e] || 0
 
   return (
     <>

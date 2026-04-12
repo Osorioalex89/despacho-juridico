@@ -25,18 +25,29 @@ export const getCasos = async (req, res) => {
     if (tipo)   where.tipo   = tipo
     if (estado) where.estado = estado
 
-    const { count, rows } = await Case.findAndCountAll({
-      where,
-      limit:  safeLimit,
-      offset,
-      order:  [['fecha_apertura', 'DESC']],
-    })
+    const [{ count, rows }, statsRows] = await Promise.all([
+      Case.findAndCountAll({
+        where,
+        limit:  safeLimit,
+        offset,
+        order:  [['fecha_apertura', 'DESC']],
+      }),
+      Case.findAll({
+        attributes: ['estado', [sequelize.fn('COUNT', sequelize.col('id_caso')), 'total']],
+        group: ['estado'],
+        raw: true,
+      }),
+    ])
+
+    const statsPorEstado = {}
+    statsRows.forEach(r => { statsPorEstado[r.estado] = parseInt(r.total) })
 
     res.json({
-      casos:        rows,
-      total:        count,
-      pagina:       parseInt(page),
-      totalPaginas: Math.ceil(count / limit),
+      casos:          rows,
+      total:          count,
+      pagina:         parseInt(page),
+      totalPaginas:   Math.ceil(count / limit),
+      statsPorEstado,
     })
   } catch (error) {
     console.error('Error al obtener casos:', error.message)
