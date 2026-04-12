@@ -508,11 +508,15 @@ export default function CaseDetail() {
             ? user.nombre.split(' ').slice(0,2).map(n => n[0]).join('').toUpperCase()
             : 'YO'
           return (
-            <div style={{ maxWidth:'720px' }}>
+            <div style={{ maxWidth:'900px', margin:'0 auto' }}>
               <style>{`
                 .chat-input-field:focus { border-color: rgba(201,168,76,0.55) !important; box-shadow: 0 0 0 3px rgba(201,168,76,0.08); }
                 .chat-input-field::placeholder { color: rgba(255,255,255,0.22); }
                 @keyframes chatPulse { 0%,100%{opacity:1} 50%{opacity:0.45} }
+                .chat-messages-scroll::-webkit-scrollbar { width: 5px; }
+                .chat-messages-scroll::-webkit-scrollbar-track { background: rgba(2,8,24,0.4); border-radius: 8px; }
+                .chat-messages-scroll::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 8px; }
+                .chat-messages-scroll::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.45); }
               `}</style>
               <div style={{
                 background:'rgba(6,14,36,0.92)', backdropFilter:'blur(20px)',
@@ -555,7 +559,7 @@ export default function CaseDetail() {
                 </div>
 
                 {/* Mensajes */}
-                <div style={{ flex:1, overflowY:'auto', padding:'20px 20px', display:'flex', flexDirection:'column', gap:'10px', minHeight:0 }}>
+                <div className="chat-messages-scroll" style={{ flex:1, overflowY:'auto', padding:'20px 20px', display:'flex', flexDirection:'column', gap:'10px', minHeight:0 }}>
                   {chatHistory.length === 0 && (
                     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:'14px' }}>
                       <div style={{ width:'48px', height:'48px', borderRadius:'12px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.18)', display:'flex', alignItems:'center', justifyContent:'center' }}>
