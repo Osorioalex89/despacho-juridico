@@ -324,6 +324,9 @@ const jobMonitoreoIA = async () => {
         await caso.update({ reporte_ia: JSON.stringify(reporte), reporte_ia_at: new Date() })
         analizados++
 
+        // Pausa entre casos para no exceder el rate limit del free tier (15 RPM)
+        await new Promise(resolve => setTimeout(resolve, 5000))
+
         // Email al abogado asignado (fire-and-forget)
         const abogado = abogadoMap[caso.id_abogado]
         const destino = abogado?.correo ?? adminEmail
