@@ -105,8 +105,12 @@ export const deleteDocumento = async (req, res) => {
     const doc = await Document.findByPk(req.params.id)
     if (!doc) return res.status(404).json({ message: 'Documento no encontrado' })
 
-    // Eliminar de Cloudinary
-    await cloudinary.uploader.destroy(doc.nombre, { resource_type: 'raw' })
+    // Eliminar de Cloudinary (tolerante a documentos viejos no migrados)
+    try {
+      await cloudinary.uploader.destroy(doc.nombre, { resource_type: 'raw' })
+    } catch (e) {
+      console.warn('[Cloudinary] No se pudo eliminar el archivo:', doc.nombre, e.message)
+    }
 
     await doc.destroy()
     res.json({ message: 'Documento eliminado correctamente' })
