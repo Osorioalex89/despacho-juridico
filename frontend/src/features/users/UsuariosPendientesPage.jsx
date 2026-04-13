@@ -98,7 +98,6 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
   const [rolSel,       setRolSel]       = useState('cliente')
   const [deleteModal,  setDeleteModal]  = useState(null)
   const [resetModal,   setResetModal]   = useState(null)   // { id_usuario, nombre, correo }
-  const [nuevaPass,    setNuevaPass]    = useState('')
   const [resetLoading, setResetLoading] = useState(false)
   const [resetError,   setResetError]   = useState('')
   const [resetOk,      setResetOk]      = useState(false)
@@ -146,20 +145,15 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
 
   const abrirResetModal = (u) => {
     setResetModal({ id_usuario: u.id_usuario, nombre: u.nombre, correo: u.correo })
-    setNuevaPass('')
     setResetError('')
     setResetOk(false)
   }
 
   const confirmarReset = async () => {
-    if (!nuevaPass || nuevaPass.length < 6) {
-      setResetError('La contraseña debe tener al menos 6 caracteres.')
-      return
-    }
     setResetLoading(true)
     setResetError('')
     try {
-      await adminResetPassword({ id_usuario: resetModal.id_usuario, nueva_contrasena: nuevaPass })
+      await adminResetPassword({ id_usuario: resetModal.id_usuario })
       setResetOk(true)
       fetchUsuarios()
     } catch (err) {
@@ -606,7 +600,7 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
                     Contraseña restablecida
                   </p>
                   <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.4)',margin:0,lineHeight:1.6}}>
-                    Se envio la nueva contraseña al correo del usuario.
+                    Se generó una contraseña temporal y se envió al correo del usuario.
                   </p>
                 </div>
                 <button onClick={()=>setResetModal(null)} style={{width:'100%',padding:'11px',borderRadius:'9px',background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.12)',color:'rgba(255,255,255,0.75)',fontFamily:"'Inter',sans-serif",fontSize:'13px',fontWeight:'500',cursor:'pointer'}}>
@@ -614,7 +608,7 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
                 </button>
               </div>
             ) : (
-              /* Formulario */
+              /* Confirmación */
               <div>
                 {/* Badge solicitud */}
                 <div style={{
@@ -628,19 +622,11 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
                   </span>
                 </div>
 
-                {/* Campo contraseña */}
-                <div style={{marginBottom:'16px'}}>
-                  <label style={{display:'block',fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'1.8px',textTransform:'uppercase',color:'rgba(255,255,255,0.45)',marginBottom:'7px'}}>
-                    Nueva contraseña temporal
-                  </label>
-                  <input
-                    className="up-pass-input"
-                    type="text"
-                    value={nuevaPass}
-                    onChange={e=>{ setNuevaPass(e.target.value); setResetError('') }}
-                    placeholder="Minimo 6 caracteres"
-                    autoComplete="off"
-                  />
+                {/* Info */}
+                <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'9px',padding:'14px 16px',marginBottom:'22px'}}>
+                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.5)',margin:0,lineHeight:1.7}}>
+                    Se generará una contraseña temporal automática y se enviará directamente al correo del usuario. El usuario deberá cambiarla al ingresar.
+                  </p>
                 </div>
 
                 {/* Error */}
@@ -652,13 +638,6 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
                   </div>
                 )}
 
-                {/* Info */}
-                <div style={{background:'rgba(255,255,255,0.03)',border:'1px solid rgba(255,255,255,0.07)',borderRadius:'9px',padding:'11px 14px',marginBottom:'22px'}}>
-                  <p style={{fontFamily:"'Inter',sans-serif",fontSize:'11.5px',color:'rgba(255,255,255,0.35)',margin:0,lineHeight:1.6}}>
-                    La nueva contraseña se enviara al correo del usuario. Se recomienda que el usuario la cambie despues de ingresar.
-                  </p>
-                </div>
-
                 <div style={{display:'flex',gap:'10px',justifyContent:'flex-end'}}>
                   <button
                     onClick={()=>setResetModal(null)}
@@ -669,11 +648,11 @@ export default function UsuariosPendientesPage({ defaultEstado = 'pendiente' }) 
                   </button>
                   <button
                     onClick={confirmarReset}
-                    disabled={resetLoading || !nuevaPass}
-                    style={{padding:'9px 20px',borderRadius:'8px',background:'linear-gradient(135deg,#C9A84C,#9A7A32)',border:'none',color:'#020818',fontFamily:"'Inter',sans-serif",fontSize:'13px',fontWeight:'700',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:'7px',opacity:(resetLoading||!nuevaPass)?0.55:1}}
+                    disabled={resetLoading}
+                    style={{padding:'9px 20px',borderRadius:'8px',background:'linear-gradient(135deg,#C9A84C,#9A7A32)',border:'none',color:'#020818',fontFamily:"'Inter',sans-serif",fontSize:'13px',fontWeight:'700',cursor:'pointer',display:'inline-flex',alignItems:'center',gap:'7px',opacity:resetLoading?0.55:1}}
                   >
                     <KeyRound size={13}/>
-                    {resetLoading ? 'Guardando...' : 'Confirmar restablecimiento'}
+                    {resetLoading ? 'Generando...' : 'Restablecer y enviar por correo'}
                   </button>
                 </div>
               </div>
