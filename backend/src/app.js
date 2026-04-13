@@ -32,7 +32,7 @@ app.use(helmet())
 // ── Middlewares globales ───────────────────────────────────────────
 app.use(cors({
   origin: process.env.CORS_ORIGIN
-    ? process.env.CORS_ORIGIN.split(',')
+    ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()).filter(Boolean)
     : ['http://localhost:5173', 'http://localhost:5174'],
   credentials: true,
 }))
