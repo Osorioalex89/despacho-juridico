@@ -256,18 +256,19 @@ export const sendResetRequestToAdmin = async ({ toAdmins, clienteNombre, cliente
 }
 
 // ── Enviar contraseña temporal al cliente ─────────────────────────
-export const sendNewPasswordToClient = async ({ to, nombre }) => {
+export const sendNewPasswordToClient = async ({ to, nombre, contrasena }) => {
   const contenido = `
     <h2 class="greeting">Hola, ${nombre}</h2>
     <p class="intro">
       El equipo del despacho ha restablecido tu contrase&#241;a de acceso.
-      Por seguridad, te la comunicar&#225;n directamente. Una vez que inicies sesi&#243;n,
-      c&#225;mbiala lo antes posible desde tu perfil.
+      Usa la contrase&#241;a temporal que aparece a continuaci&#243;n para iniciar sesi&#243;n.
+      Por seguridad, c&#225;mbiala desde tu perfil en cuanto puedas.
     </p>
 
     <div class="otp-box">
-      <p class="otp-label">&#10003; Contrase&#241;a restablecida</p>
-      <p class="otp-expires">Cont&#225;ctate con el despacho para recibir tu contrase&#241;a temporal</p>
+      <p class="otp-label" style="font-size:13px;margin:0 0 10px;">Tu contrase&#241;a temporal</p>
+      <p style="font-family:'Courier New',monospace;font-size:22px;font-weight:700;letter-spacing:3px;color:#E8C97A;margin:0 0 10px;">${contrasena}</p>
+      <p class="otp-expires">&#9888;&#65039; Ingresa y c&#225;mbiala lo antes posible</p>
     </div>
 
     <p style="font-size:13px;color:rgba(255,255,255,0.3);margin:0 0 20px;line-height:1.6;">

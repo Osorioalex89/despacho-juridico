@@ -46,7 +46,7 @@ GET  /api/auth/verificar-email       → ?token=xxx → activo:true (idempotente
 POST /api/auth/login                 → Paso 1 OTP → { requiresOtp, tempToken, maskedEmail }
 POST /api/auth/verify-otp            → Paso 2 OTP → { token, user }
 POST /api/auth/solicitar-reset       → público; notifica admins
-POST /api/auth/admin-reset-password  → protegido (abogado/secretario)
+POST /api/auth/admin-reset-password  → protegido (abogado/secretario); genera contraseña temporal automática y la envía al correo del cliente [Flujo A temporal — pendiente migrar a Flujo B: self-service token con link]
 CRUD /api/clientes · /api/casos · /api/citas · /api/documentos · /api/usuarios
 PATCH /api/documentos/:id/toggle-bloqueo
 GET  /api/documentos/mis-documentos/:id/preview  → cliente; inline si desbloqueado
@@ -177,6 +177,11 @@ ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
 | Vercel (frontend) | `despacho-juridico` · cuenta `abogadoadmin89@gmail.com` | `despacho-juridico-plum.vercel.app` |
 | Vercel (landing) | `despacho-landing` · cuenta `abogadoadmin89@gmail.com` | `despacho-landing-olive.vercel.app` |
 
+### Dominio pendiente — finales de abril 2026
+- Dominio elegido: **`sanchezcerino.mx`** · Registrador: Neubox (~$139 MXN/año)
+- Al comprarlo: configurar SPF + DKIM + DMARC en SendGrid y cambiar sender de `abogadoadmin89@gmail.com` a `notificaciones@sanchezcerino.mx`
+- Motivo: emails actuales llegan con delay (status "Deferred") por política DMARC de Gmail que rechaza emails enviados desde SendGrid con sender @gmail.com
+
 **Notas Railway:**
 - Root Directory: `backend/` · Start: `npm start`
 - `trust proxy 1` en `app.js` para rate-limit correcto
@@ -221,6 +226,11 @@ Los documentos se almacenan en Cloudinary (no en disco — Railway filesystem es
 | `security-officer` | OTP, Turnstile, JWT, bcrypt |
 
 ## Pendientes técnicos
+
+### Recuperación de contraseña — Flujo A implementado (pendiente Flujo B)
+- **Flujo A actual ✅:** cliente solicita reset → admin aprueba en panel → sistema genera contraseña temporal automática (`Tmp-XXXXXXXX`) → se envía al correo del cliente con la contraseña visible
+- **Flujo B pendiente:** admin aprueba → se genera token con expiración → email con link al cliente → cliente establece su propia contraseña en `/reset-password?token=xxx`
+  - Requiere: columna `reset_token + reset_token_expires` en `usuarios` · 2 rutas nuevas · página nueva en frontend
 
 ### Persistencia del historial del Chat IA ✅
 Historial persistido en BD, aislado por usuario. El chat sobrevive refresco y es auditable por caso.

@@ -315,17 +315,14 @@ export const solicitarReset = async (req, res) => {
 }
 
 // ── POST /api/auth/admin-reset-password ───────────────────────────
-// Ruta protegida (abogado/secretario): asigna contraseña temporal al usuario
-// indicado, limpia el flag de reset y notifica al cliente por correo.
+// Ruta protegida (abogado/secretario): genera contraseña temporal automática,
+// la asigna al usuario, limpia el flag de reset y la envía por correo al cliente.
 export const adminResetPassword = async (req, res) => {
   try {
-    const { id_usuario, nueva_contrasena } = req.body
+    const { id_usuario } = req.body
 
-    if (!id_usuario || !nueva_contrasena) {
-      return res.status(400).json({ message: 'id_usuario y nueva_contrasena son requeridos' })
-    }
-    if (nueva_contrasena.length < 8) {
-      return res.status(400).json({ message: 'La contraseña debe tener al menos 8 caracteres' })
+    if (!id_usuario) {
+      return res.status(400).json({ message: 'id_usuario es requerido' })
     }
 
     const user = await User.findByPk(id_usuario)
@@ -333,17 +330,25 @@ export const adminResetPassword = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' })
     }
 
-    const hash = await bcrypt.hash(nueva_contrasena, 10)
+    // Generar contraseña temporal: prefijo fijo + 8 chars aleatorios (mayúsc + núm)
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+    const randomPart = Array.from({ length: 8 }, () =>
+      chars[Math.floor(Math.random() * chars.length)]
+    ).join('')
+    const contrasenaTemp = `Tmp-${randomPart}`
+
+    const hash = await bcrypt.hash(contrasenaTemp, 10)
     await user.update({
       contrasena:          hash,
       reset_solicitado:    false,
       reset_solicitado_at: null,
     })
 
-    // Notificar al cliente — fire-and-forget, no incluir contraseña en el correo
+    // Notificar al cliente con la contraseña temporal — fire-and-forget
     sendNewPasswordToClient({
-      to:     user.correo,
-      nombre: user.nombre,
+      to:        user.correo,
+      nombre:    user.nombre,
+      contrasena: contrasenaTemp,
     }).catch(err => console.error('Error enviando nueva contraseña al cliente:', err.message))
 
     res.json({ message: `Contraseña restablecida correctamente. Se notificó a ${user.correo}.` })
