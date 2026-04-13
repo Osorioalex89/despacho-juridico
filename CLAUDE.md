@@ -126,7 +126,8 @@ CORS_ORIGIN=http://localhost:5173,http://localhost:5174
 TURNSTILE_SECRET=<secret_cloudflare>
 ADMIN_EMAIL=osorioalexander640@gmail.com
 GROQ_API_KEY=gsk_...             # opcional; sin key la IA no aparece · modelo: llama-3.3-70b-versatile (Groq)
-SENDGRID_API_KEY=<key>          # producción usa SendGrid
+RESEND_API_KEY=re_...            # Resend.com — entrega inmediata sin DMARC · sender: onboarding@resend.dev
+                                # Al tener dominio: verificar sanchezcerino.mx en Resend y cambiar FROM_EMAIL en emailService.js
 ```
 
 ### `frontend/.env`
@@ -185,7 +186,7 @@ ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
 **Notas Railway:**
 - Root Directory: `backend/` · Start: `npm start`
 - `trust proxy 1` en `app.js` para rate-limit correcto
-- Email: SendGrid HTTP API (Gmail SMTP bloqueado en Railway). Sender verificado: `abogadoadmin89@gmail.com`
+- Email: Resend HTTP API (`fetch` nativo). Sender: `onboarding@resend.dev` (evita DMARC de Gmail). Env var: `RESEND_API_KEY`
 - CORS_ORIGIN incluye frontend + landing
 - **IMPORTANTE:** Railway usa `npm ci` — al cambiar dependencias en `package.json` siempre ejecutar `npm install --package-lock-only` en `backend/` y commitear el `package-lock.json` actualizado. Si no, el build falla silenciosamente y Railway sigue corriendo el código antiguo.
 

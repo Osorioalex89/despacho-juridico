@@ -1,17 +1,29 @@
-import sgMail from '@sendgrid/mail'
-
-// ── Cliente SendGrid (HTTP API — sin SMTP, funciona en Railway) ───
-sgMail.setApiKey(process.env.SENDGRID_API_KEY)
-
-const FROM_EMAIL = {
-  email: process.env.SENDGRID_FROM_EMAIL || 'abogadoadmin89@gmail.com',
-  name:  'Despacho Jurídico Sánchez Cerino',
-}
+// ── Cliente Resend (HTTP API — entrega inmediata, sin problemas DMARC) ──
+// Cuando se tenga dominio propio: cambiar FROM a notificaciones@sanchezcerino.mx
+const FROM_EMAIL = 'Despacho Jurídico Sánchez Cerino <onboarding@resend.dev>'
 
 // Wrapper compatible con todas las llamadas existentes a transporter.sendMail
 const transporter = {
-  sendMail: ({ to, subject, html }) =>
-    sgMail.send({ from: FROM_EMAIL, to, subject, html }),
+  sendMail: async ({ to, subject, html }) => {
+    const res = await fetch('https://api.resend.com/emails', {
+      method:  'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
+        'Content-Type':  'application/json',
+      },
+      body: JSON.stringify({
+        from:    FROM_EMAIL,
+        to:      Array.isArray(to) ? to : [to],
+        subject,
+        html,
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.text()
+      throw new Error(`Resend error ${res.status}: ${err}`)
+    }
+    return res.json()
+  },
 }
 
 // ── Plantilla base Legal Premium (Navy/Gold) ───────────────────────
