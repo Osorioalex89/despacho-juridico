@@ -82,6 +82,8 @@ async function runMigrations() {
     "ALTER TABLE casos ADD COLUMN reporte_ia TEXT NULL",
     "ALTER TABLE casos ADD COLUMN reporte_ia_at DATETIME NULL",
     "ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL",
+    "ALTER TABLE citas ADD COLUMN mensaje TEXT NULL",
+    "ALTER TABLE citas ADD COLUMN id_solicitante INT NULL",
   ]
   for (const q of migrations) {
     try {
