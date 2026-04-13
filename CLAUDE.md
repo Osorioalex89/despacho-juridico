@@ -181,7 +181,7 @@ ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
 ### Dominio pendiente — finales de abril 2026
 - Dominio elegido: **`sanchezcerino.mx`** · Registrador: Neubox (~$139 MXN/año)
 - Al comprarlo: configurar SPF + DKIM + DMARC en SendGrid y cambiar sender de `abogadoadmin89@gmail.com` a `notificaciones@sanchezcerino.mx`
-- Motivo: emails actuales llegan con delay (status "Deferred") por política DMARC de Gmail que rechaza emails enviados desde SendGrid con sender @gmail.com
+- Email migrado a Resend.com ✅ — entrega inmediata, sin spam, sin problemas DMARC. Al comprar el dominio: verificar `sanchezcerino.mx` en Resend y cambiar `FROM_EMAIL` en `emailService.js`
 
 **Notas Railway:**
 - Root Directory: `backend/` · Start: `npm start`
