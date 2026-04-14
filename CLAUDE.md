@@ -94,8 +94,9 @@ text-primary: rgba(255,255,255,0.95) · text-secondary: rgba(255,255,255,0.55)
 3. Login paso 2: `tempToken` + OTP → JWT **2h** · 3 intentos · `expired:true` redirige al login
 4. `verificarEmail` idempotente (tolera doble petición React StrictMode)
 
-### Email — `emailService.js` (SendGrid HTTP API)
+### Email — `emailService.js` (SendGrid SDK `@sendgrid/mail`)
 Plantilla Navy/Gold. Todas las notificaciones son **fire-and-forget**.
+**Estado actual:** SendGrid con sender `abogadoadmin89@gmail.com`. Correos llegan a spam por DMARC de Gmail — se resuelve al comprar dominio. Si falla entrega el día del demo: aplicar bypass de desarrollo (ver abajo).
 ```
 sendOtpEmail · sendVerificationEmail · sendResetRequestToAdmin · sendNewPasswordToClient
 notifyAdminNewUser · notifyNewCaseComment · notifyNuevoCasoAsignado · notifyDocumentoAdjunto
@@ -126,8 +127,10 @@ CORS_ORIGIN=http://localhost:5173,http://localhost:5174
 TURNSTILE_SECRET=<secret_cloudflare>
 ADMIN_EMAIL=osorioalexander640@gmail.com
 GROQ_API_KEY=gsk_...             # opcional; sin key la IA no aparece · modelo: llama-3.3-70b-versatile (Groq)
-RESEND_API_KEY=re_...            # Resend.com — entrega inmediata sin DMARC · sender: onboarding@resend.dev
-                                # Al tener dominio: verificar sanchezcerino.mx en Resend y cambiar FROM_EMAIL en emailService.js
+SENDGRID_API_KEY=SG....          # SendGrid SDK · sender: abogadoadmin89@gmail.com (Single Sender verificado)
+SENDGRID_FROM_EMAIL=abogadoadmin89@gmail.com
+                                # ⚠ Correos van a spam por DMARC de Gmail. Solución permanente: dominio sanchezcerino.mx
+                                # Si la entrega falla: en auth.controller.js registro(), activar bypass dev (activo:true sin email)
 ```
 
 ### `frontend/.env`
@@ -180,13 +183,12 @@ ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL;
 
 ### Dominio pendiente — finales de abril 2026
 - Dominio elegido: **`sanchezcerino.mx`** · Registrador: Neubox (~$139 MXN/año)
-- Al comprarlo: configurar SPF + DKIM + DMARC en SendGrid y cambiar sender de `abogadoadmin89@gmail.com` a `notificaciones@sanchezcerino.mx`
-- Email migrado a Resend.com ✅ — entrega inmediata, sin spam, sin problemas DMARC. Al comprar el dominio: verificar `sanchezcerino.mx` en Resend y cambiar `FROM_EMAIL` en `emailService.js`
+- Al comprarlo: verificar dominio en SendGrid → configurar SPF + DKIM + DMARC → cambiar `SENDGRID_FROM_EMAIL` a `notificaciones@sanchezcerino.mx` en Railway
 
 **Notas Railway:**
 - Root Directory: `backend/` · Start: `npm start`
 - `trust proxy 1` en `app.js` para rate-limit correcto
-- Email: Resend HTTP API (`fetch` nativo). Sender: `onboarding@resend.dev` (evita DMARC de Gmail). Env var: `RESEND_API_KEY`
+- Email: SendGrid SDK (`@sendgrid/mail`). Sender: `abogadoadmin89@gmail.com`. Env vars: `SENDGRID_API_KEY` + `SENDGRID_FROM_EMAIL`
 - CORS_ORIGIN incluye frontend + landing
 - **IMPORTANTE:** Railway usa `npm ci` — al cambiar dependencias en `package.json` siempre ejecutar `npm install --package-lock-only` en `backend/` y commitear el `package-lock.json` actualizado. Si no, el build falla silenciosamente y Railway sigue corriendo el código antiguo.
 
