@@ -1,28 +1,14 @@
-// ── Cliente Resend (HTTP API — entrega inmediata, sin problemas DMARC) ──
-// Cuando se tenga dominio propio: cambiar FROM a notificaciones@sanchezcerino.mx
-const FROM_EMAIL = 'Despacho Jurídico Sánchez Cerino <onboarding@resend.dev>'
+// ── Cliente SendGrid ──────────────────────────────────────────────────
+import sgMail from '@sendgrid/mail'
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
+
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'abogadoadmin89@gmail.com'
 
 // Wrapper compatible con todas las llamadas existentes a transporter.sendMail
 const transporter = {
   sendMail: async ({ to, subject, html }) => {
-    const res = await fetch('https://api.resend.com/emails', {
-      method:  'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-        'Content-Type':  'application/json',
-      },
-      body: JSON.stringify({
-        from:    FROM_EMAIL,
-        to:      Array.isArray(to) ? to : [to],
-        subject,
-        html,
-      }),
-    })
-    if (!res.ok) {
-      const err = await res.text()
-      throw new Error(`Resend error ${res.status}: ${err}`)
-    }
-    return res.json()
+    const recipients = Array.isArray(to) ? to : [to]
+    await sgMail.sendMultiple({ to: recipients, from: FROM_EMAIL, subject, html })
   },
 }
 
