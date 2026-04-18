@@ -6,7 +6,6 @@ import {
   sendOtpEmail,
   sendVerificationEmail,
   sendResetRequestToAdmin,
-  sendNewPasswordToClient,
   sendResetLinkToClient,
   notifyAdminNewUser,
 } from '../services/emailService.js'
