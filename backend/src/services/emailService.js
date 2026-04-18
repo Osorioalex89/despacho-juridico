@@ -253,32 +253,33 @@ export const sendResetRequestToAdmin = async ({ toAdmins, clienteNombre, cliente
   }
 }
 
-// ── Enviar contraseña temporal al cliente ─────────────────────────
-export const sendNewPasswordToClient = async ({ to, nombre, contrasena }) => {
+// ── Enviar link de reset de contraseña al cliente (Flujo B) ──────
+export const sendResetLinkToClient = async ({ to, nombre, resetUrl }) => {
   const contenido = `
     <h2 class="greeting">Hola, ${nombre}</h2>
     <p class="intro">
-      El equipo del despacho ha restablecido tu contrase&#241;a de acceso.
-      Usa la contrase&#241;a temporal que aparece a continuaci&#243;n para iniciar sesi&#243;n.
-      Por seguridad, c&#225;mbiala desde tu perfil en cuanto puedas.
+      El despacho ha aprobado tu solicitud de restablecimiento de contrase&#241;a.
+      Haz clic en el bot&#243;n de abajo para establecer una nueva contrase&#241;a.
+      El enlace es v&#225;lido por <strong style="color:rgba(255,255,255,0.75)">2 horas</strong>.
     </p>
 
-    <div class="otp-box">
-      <p class="otp-label" style="font-size:13px;margin:0 0 10px;">Tu contrase&#241;a temporal</p>
-      <p style="font-family:'Courier New',monospace;font-size:22px;font-weight:700;letter-spacing:3px;color:#E8C97A;margin:0 0 10px;">${contrasena}</p>
-      <p class="otp-expires">&#9888;&#65039; Ingresa y c&#225;mbiala lo antes posible</p>
+    <a href="${resetUrl}" class="verify-btn">Establecer nueva contrase&#241;a</a>
+
+    <div class="otp-box" style="margin-bottom:20px;">
+      <p class="otp-label">O copia este enlace en tu navegador</p>
+      <p style="font-size:11px;color:rgba(201,168,76,0.7);word-break:break-all;margin:0;line-height:1.6;">${resetUrl}</p>
     </div>
 
     <p style="font-size:13px;color:rgba(255,255,255,0.3);margin:0 0 20px;line-height:1.6;">
-      Si no solicitaste este cambio, contacta al despacho de inmediato.
+      Si no solicitaste este cambio, ignora este correo. Tu contrase&#241;a actual sigue siendo v&#225;lida.
     </p>
   `
 
   await transporter.sendMail({
     from: `"Despacho Jurídico · Lic. Sánchez" <${process.env.GMAIL_USER}>`,
     to,
-    subject: 'Tu nueva contraseña temporal — Despacho Jurídico',
-    html: emailBase('Nueva contrase&#241;a temporal', contenido),
+    subject: 'Restablece tu contraseña — Despacho Jurídico',
+    html: emailBase('Restablece tu contrase&#241;a', contenido),
   })
 }
 

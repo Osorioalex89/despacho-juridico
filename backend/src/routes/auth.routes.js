@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import rateLimit from 'express-rate-limit'
-import { login, registro, verifyOtp, verificarEmail, solicitarReset, adminResetPassword, resendOtp } from '../controllers/auth.controller.js'
+import { login, registro, verifyOtp, verificarEmail, solicitarReset, adminResetPassword, resetPassword, resendOtp } from '../controllers/auth.controller.js'
 import { verifyToken, requireRole } from '../middlewares/auth.middleware.js'
 
 const router = Router()
@@ -41,7 +41,9 @@ router.get ('/verificar-email',      verificarEmail)
 // ── Recuperacion de contrasena ───────────────────────────────────
 // Ruta publica: cualquier usuario puede solicitar reset
 router.post('/solicitar-reset',      solicitarReset)
-// Ruta protegida: solo abogado o secretario puede asignar nueva contrasena
+// Ruta protegida: solo abogado o secretario aprueba y genera el token
 router.post('/admin-reset-password', verifyToken, requireRole('abogado', 'secretario'), adminResetPassword)
+// Ruta pública: el cliente usa el token del correo para establecer su nueva contraseña
+router.post('/reset-password', resetPassword)
 
 export default router
