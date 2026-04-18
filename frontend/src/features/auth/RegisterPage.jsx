@@ -3,41 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../services/axios.config'
 import { Eye, EyeOff, CheckCircle } from 'lucide-react'
 import fondoImg from '../../assets/fondo-clinica.jpg'
+import logoSC from '../../assets/logos/logo-sc.png'
 
 // Clave de sitio Cloudflare Turnstile
 // TEST: '1x00000000000000000000AA' (siempre pasa — reemplazar por la real)
 const TURNSTILE_SITE_KEY = import.meta.env.VITE_TURNSTILE_SITE_KEY || '1x00000000000000000000AA'
 
-// ── Logo SC (mismo del login) ─────────────────────────────────────
-const LogoSC = ({ size = 60 }) => (
-  <svg viewBox="0 0 72 72" width={size} height={size} fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="rg-gold" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#E8C97A"/><stop offset="100%" stopColor="#9A7A32"/>
-      </linearGradient>
-      <linearGradient id="rg-navy" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#1e3a5f"/><stop offset="100%" stopColor="#0e1830"/>
-      </linearGradient>
-    </defs>
-    <rect width="72" height="72" rx="16" fill="url(#rg-navy)" stroke="rgba(201,168,76,0.4)" strokeWidth="1.2"/>
-    <rect x="1" y="1" width="70" height="32" rx="15" fill="rgba(255,255,255,0.04)"/>
-    <rect x="35.2" y="11" width="1.6" height="34" rx="0.8" fill="url(#rg-gold)" opacity="0.9"/>
-    <circle cx="36" cy="11" r="2.8" fill="url(#rg-gold)"/>
-    <rect x="14" y="22" width="44" height="2" rx="1" fill="url(#rg-gold)" opacity="0.85"/>
-    <line x1="19" y1="24" x2="16" y2="33" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.7"/>
-    <line x1="19" y1="24" x2="22" y2="33" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.7"/>
-    <ellipse cx="19" cy="34.2" rx="6" ry="2.2" fill="url(#rg-gold)" opacity="0.8"/>
-    <line x1="53" y1="24" x2="50" y2="33" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.7"/>
-    <line x1="53" y1="24" x2="56" y2="33" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.7"/>
-    <ellipse cx="53" cy="34.2" rx="6" ry="2.2" fill="url(#rg-gold)" opacity="0.8"/>
-    <rect x="29" y="45" width="14" height="1.8" rx="0.9" fill="url(#rg-gold)" opacity="0.65"/>
-    <text x="36" y="58" textAnchor="middle"
-      fontFamily="Georgia,'Times New Roman',serif"
-      fontSize="11" fontWeight="700"
-      fill="url(#rg-gold)" opacity="0.95" letterSpacing="2">SC</text>
-    <rect x="28" y="61" width="16" height="1" rx="0.5" fill="url(#rg-gold)" opacity="0.35"/>
-  </svg>
-)
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -263,7 +234,7 @@ export default function RegisterPage() {
           {/* Logo + Nombre */}
           <div style={{textAlign:'center',marginBottom:'14px'}}>
             <div style={{display:'inline-block',marginBottom:'8px'}}>
-              <LogoSC size={52}/>
+              <img src={logoSC} alt="SC" style={{ width: 52, height: 52, borderRadius: 14, objectFit: 'cover' }} />
             </div>
             <h1 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:'19px',fontWeight:'700',color:'rgba(255,255,255,0.97)',margin:'0 0 4px',textShadow:'0 2px 8px rgba(0,0,0,0.4)',lineHeight:1.2}}>
               Lic. Horacio{' '}
