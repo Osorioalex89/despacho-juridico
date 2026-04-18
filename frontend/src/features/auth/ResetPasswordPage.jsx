@@ -1,61 +1,73 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../services/axios.config'
 
-// ── Logo SVG igual al de LoginPage ────────────────────────────────
 const LogoSC = ({ size = 64 }) => (
   <svg viewBox="0 0 72 72" width={size} height={size} fill="none" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <linearGradient id="oc-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <linearGradient id="rp-gold" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#E8C97A"/>
         <stop offset="100%" stopColor="#9A7A32"/>
       </linearGradient>
-      <linearGradient id="oc-navy" x1="0%" y1="0%" x2="100%" y2="100%">
+      <linearGradient id="rp-navy" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#1e3a5f"/>
         <stop offset="100%" stopColor="#0e1830"/>
       </linearGradient>
     </defs>
-    <rect width="72" height="72" rx="16" fill="url(#oc-navy)" stroke="rgba(201,168,76,0.4)" strokeWidth="1.2"/>
+    <rect width="72" height="72" rx="16" fill="url(#rp-navy)" stroke="rgba(201,168,76,0.4)" strokeWidth="1.2"/>
     <rect x="1" y="1" width="70" height="32" rx="15" fill="rgba(255,255,255,0.04)"/>
-    <rect x="35.2" y="11" width="1.6" height="34" rx="0.8" fill="url(#oc-gold)" opacity="0.9"/>
-    <circle cx="36" cy="11" r="2.8" fill="url(#oc-gold)"/>
-    <rect x="14" y="22" width="44" height="2" rx="1" fill="url(#oc-gold)" opacity="0.85"/>
+    <rect x="35.2" y="11" width="1.6" height="34" rx="0.8" fill="url(#rp-gold)" opacity="0.9"/>
+    <circle cx="36" cy="11" r="2.8" fill="url(#rp-gold)"/>
+    <rect x="14" y="22" width="44" height="2" rx="1" fill="url(#rp-gold)" opacity="0.85"/>
     <line x1="19" y1="24" x2="16" y2="33" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.7"/>
     <line x1="19" y1="24" x2="22" y2="33" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.7"/>
-    <ellipse cx="19" cy="34.2" rx="6" ry="2.2" fill="url(#oc-gold)" opacity="0.8"/>
+    <ellipse cx="19" cy="34.2" rx="6" ry="2.2" fill="url(#rp-gold)" opacity="0.8"/>
     <line x1="53" y1="24" x2="50" y2="33" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.7"/>
     <line x1="53" y1="24" x2="56" y2="33" stroke="#C9A84C" strokeWidth="1.2" strokeOpacity="0.7"/>
-    <ellipse cx="53" cy="34.2" rx="6" ry="2.2" fill="url(#oc-gold)" opacity="0.8"/>
-    <rect x="29" y="45" width="14" height="1.8" rx="0.9" fill="url(#oc-gold)" opacity="0.65"/>
+    <ellipse cx="53" cy="34.2" rx="6" ry="2.2" fill="url(#rp-gold)" opacity="0.8"/>
+    <rect x="29" y="45" width="14" height="1.8" rx="0.9" fill="url(#rp-gold)" opacity="0.65"/>
     <text x="36" y="58" textAnchor="middle"
       fontFamily="Georgia, 'Times New Roman', serif"
       fontSize="11" fontWeight="700"
-      fill="url(#oc-gold)" opacity="0.95" letterSpacing="2">SC</text>
-    <rect x="28" y="61" width="16" height="1" rx="0.5" fill="url(#oc-gold)" opacity="0.35"/>
+      fill="url(#rp-gold)" opacity="0.95" letterSpacing="2">SC</text>
+    <rect x="28" y="61" width="16" height="1" rx="0.5" fill="url(#rp-gold)" opacity="0.35"/>
   </svg>
 )
 
-export default function OlvideContrasenaPage() {
+export default function ResetPasswordPage() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get('token') || ''
 
-  const [correo,  setCorreo]  = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error,   setError]   = useState('')
-  const [enviado, setEnviado] = useState(false)
+  const [contrasena,  setContrasena]  = useState('')
+  const [confirmar,   setConfirmar]   = useState('')
+  const [loading,     setLoading]     = useState(false)
+  const [error,       setError]       = useState('')
+  const [exito,       setExito]       = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+
+    if (contrasena.length < 8) {
+      return setError('La contrasena debe tener al menos 8 caracteres.')
+    }
+    if (contrasena !== confirmar) {
+      return setError('Las contrasenas no coinciden.')
+    }
+
     setLoading(true)
     try {
-      await api.post('/auth/solicitar-reset', { correo })
-      setEnviado(true)
+      await api.post('/auth/reset-password', { token, contrasena })
+      setExito(true)
     } catch (err) {
-      const msg = err.response?.data?.message
+      const data = err.response?.data
       if (!err.response) {
         setError('No se pudo conectar con el servidor. Intenta mas tarde.')
+      } else if (data?.expired) {
+        setError('El enlace ha expirado. Solicita un nuevo restablecimiento desde la pagina de inicio de sesion.')
       } else {
-        setError(msg ?? 'Error al enviar la solicitud.')
+        setError(data?.message ?? 'Error al restablecer la contrasena.')
       }
     } finally {
       setLoading(false)
@@ -79,9 +91,8 @@ export default function OlvideContrasenaPage() {
           from { opacity:0; transform:translateY(32px) scale(0.97); }
           to   { opacity:1; transform:translateY(0) scale(1); }
         }
-        .oc-card { animation: floatIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both; }
-
-        .oc-input {
+        .rp-card { animation: floatIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both; }
+        .rp-input {
           width: 100%; padding: 13px 16px;
           border-radius: 10px;
           border: 1px solid rgba(255,255,255,0.12);
@@ -92,11 +103,10 @@ export default function OlvideContrasenaPage() {
           transition: all 0.18s ease;
           colorScheme: dark;
         }
-        .oc-input::placeholder { color: rgba(255,255,255,0.2); }
-        .oc-input:hover  { border-color:rgba(255,255,255,0.22); background:rgba(255,255,255,0.08); }
-        .oc-input:focus  { border-color:rgba(201,168,76,0.55); background:rgba(201,168,76,0.05); box-shadow:0 0 0 3px rgba(201,168,76,0.12); }
-
-        .oc-btn {
+        .rp-input::placeholder { color: rgba(255,255,255,0.2); }
+        .rp-input:hover  { border-color:rgba(255,255,255,0.22); background:rgba(255,255,255,0.08); }
+        .rp-input:focus  { border-color:rgba(201,168,76,0.55); background:rgba(201,168,76,0.05); box-shadow:0 0 0 3px rgba(201,168,76,0.12); }
+        .rp-btn {
           width: 100%; padding: 14px;
           border-radius: 10px; border: none;
           background: linear-gradient(135deg, #C9A84C 0%, #9A7A32 100%);
@@ -106,11 +116,10 @@ export default function OlvideContrasenaPage() {
           box-shadow: 0 4px 20px rgba(201,168,76,0.3);
           letter-spacing: 0.02em;
         }
-        .oc-btn:hover:not(:disabled) { background:linear-gradient(135deg,#E8C97A 0%,#C9A84C 100%); transform:translateY(-2px); box-shadow:0 8px 28px rgba(201,168,76,0.4); }
-        .oc-btn:active:not(:disabled) { transform:translateY(0); }
-        .oc-btn:disabled { opacity:0.5; cursor:not-allowed; }
-
-        .oc-back-btn {
+        .rp-btn:hover:not(:disabled) { background:linear-gradient(135deg,#E8C97A 0%,#C9A84C 100%); transform:translateY(-2px); box-shadow:0 8px 28px rgba(201,168,76,0.4); }
+        .rp-btn:active:not(:disabled) { transform:translateY(0); }
+        .rp-btn:disabled { opacity:0.5; cursor:not-allowed; }
+        .rp-back-btn {
           width: 100%; padding: 13px;
           border-radius: 10px;
           border: 1px solid rgba(255,255,255,0.1);
@@ -119,7 +128,7 @@ export default function OlvideContrasenaPage() {
           font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500;
           cursor: pointer; transition: all 0.18s ease; margin-top: 10px;
         }
-        .oc-back-btn:hover { background:rgba(255,255,255,0.08); border-color:rgba(201,168,76,0.25); color:rgba(255,255,255,0.9); }
+        .rp-back-btn:hover { background:rgba(255,255,255,0.08); border-color:rgba(201,168,76,0.25); color:rgba(255,255,255,0.9); }
       `}</style>
 
       <div style={{
@@ -133,8 +142,6 @@ export default function OlvideContrasenaPage() {
         backgroundSize: 'cover',
         backgroundPosition: 'center',
       }}>
-
-        {/* Overlay */}
         <div style={{
           position: 'absolute', inset: 0,
           background: `
@@ -145,7 +152,6 @@ export default function OlvideContrasenaPage() {
           zIndex: 1,
         }}/>
 
-        {/* Anillos decorativos */}
         {[400, 280, 180].map((s, i) => (
           <div key={i} style={{
             position: 'absolute',
@@ -157,9 +163,8 @@ export default function OlvideContrasenaPage() {
           }}/>
         ))}
 
-        {/* Card principal */}
         <div
-          className="oc-card"
+          className="rp-card"
           style={{
             position: 'relative', zIndex: 10,
             width: '100%', maxWidth: '460px',
@@ -174,13 +179,11 @@ export default function OlvideContrasenaPage() {
             overflow: 'hidden',
           }}
         >
-          {/* Brillo interior top */}
           <div style={{
             position: 'absolute', top: 0, left: 0, right: 0, height: '1px',
             background: 'linear-gradient(90deg,transparent,rgba(201,168,76,0.4),transparent)',
           }}/>
 
-          {/* Logo + nombre */}
           <div style={{ textAlign: 'center', marginBottom: '36px' }} translate="no">
             <div style={{ display: 'inline-block', marginBottom: '16px' }}>
               <LogoSC size={68}/>
@@ -210,25 +213,31 @@ export default function OlvideContrasenaPage() {
             }}/>
           </div>
 
-          {/* Titulo */}
-          <div style={{ marginBottom: '24px' }} translate="no">
-            <p style={{
-              fontFamily: "'Playfair Display',serif",
-              fontSize: '20px', fontWeight: '700',
-              color: 'rgba(255,255,255,0.95)', margin: '0 0 5px',
-            }}>
-              Recuperar contrasena
-            </p>
-            <p style={{
-              fontFamily: "'Inter',sans-serif", fontSize: '13px',
-              color: 'rgba(255,255,255,0.38)', margin: 0, lineHeight: 1.6,
-            }}>
-              Ingresa tu correo y notificaremos al despacho para que te asigne una contrasena temporal.
-            </p>
-          </div>
-
-          {/* Estado enviado */}
-          {enviado ? (
+          {!token ? (
+            <div>
+              <div style={{
+                background: 'rgba(239,68,68,0.1)',
+                border: '1px solid rgba(239,68,68,0.25)',
+                borderRadius: '14px', padding: '24px',
+                textAlign: 'center', marginBottom: '24px',
+              }} translate="no">
+                <p style={{
+                  fontFamily: "'Playfair Display',serif",
+                  fontSize: '16px', fontWeight: '700',
+                  color: 'rgba(255,255,255,0.9)', margin: '0 0 8px',
+                }}>Enlace invalido</p>
+                <p style={{
+                  fontFamily: "'Inter',sans-serif", fontSize: '13px',
+                  color: 'rgba(255,255,255,0.45)', margin: 0, lineHeight: 1.6,
+                }}>
+                  Este enlace no es valido. Solicita un nuevo restablecimiento de contrasena.
+                </p>
+              </div>
+              <button className="rp-back-btn" onClick={() => navigate('/olvide-contrasena')} translate="no">
+                Solicitar restablecimiento
+              </button>
+            </div>
+          ) : exito ? (
             <div>
               <div style={{
                 background: 'rgba(34,197,94,0.1)',
@@ -248,22 +257,37 @@ export default function OlvideContrasenaPage() {
                   fontSize: '17px', fontWeight: '700',
                   color: 'rgba(255,255,255,0.95)', margin: '0 0 8px',
                 }}>
-                  Solicitud enviada
+                  Contrasena actualizada
                 </p>
                 <p style={{
                   fontFamily: "'Inter',sans-serif", fontSize: '13px',
                   color: 'rgba(255,255,255,0.45)', margin: 0, lineHeight: 1.6,
                 }}>
-                  El despacho revisara tu solicitud. Cuando sea aprobada recibiras un enlace en tu correo para establecer tu nueva contrasena.
+                  Tu contrasena ha sido establecida correctamente. Ya puedes iniciar sesion.
                 </p>
               </div>
-              <button className="oc-back-btn" onClick={() => navigate('/login')} translate="no">
-                Volver al inicio de sesion
+              <button className="rp-btn" onClick={() => navigate('/login')} translate="no">
+                Iniciar sesion
               </button>
             </div>
           ) : (
             <>
-              {/* Error */}
+              <div style={{ marginBottom: '24px' }} translate="no">
+                <p style={{
+                  fontFamily: "'Playfair Display',serif",
+                  fontSize: '20px', fontWeight: '700',
+                  color: 'rgba(255,255,255,0.95)', margin: '0 0 5px',
+                }}>
+                  Nueva contrasena
+                </p>
+                <p style={{
+                  fontFamily: "'Inter',sans-serif", fontSize: '13px',
+                  color: 'rgba(255,255,255,0.38)', margin: 0, lineHeight: 1.6,
+                }}>
+                  Elige una contrasena segura de al menos 8 caracteres.
+                </p>
+              </div>
+
               {error && (
                 <div style={{
                   display: 'flex', alignItems: 'flex-start', gap: '10px',
@@ -282,9 +306,8 @@ export default function OlvideContrasenaPage() {
                 </div>
               )}
 
-              {/* Formulario */}
               <form onSubmit={handleSubmit}>
-                <div style={{ marginBottom: '24px' }}>
+                <div style={{ marginBottom: '18px' }}>
                   <label style={{
                     display: 'block',
                     fontFamily: "'Inter',sans-serif",
@@ -293,32 +316,53 @@ export default function OlvideContrasenaPage() {
                     color: 'rgba(255,255,255,0.5)',
                     marginBottom: '7px',
                   }} translate="no">
-                    Correo electronico
+                    Nueva contrasena
                   </label>
                   <input
-                    className="oc-input"
-                    type="email"
-                    value={correo}
-                    onChange={e => setCorreo(e.target.value)}
-                    placeholder="correo@ejemplo.com"
+                    className="rp-input"
+                    type="password"
+                    value={contrasena}
+                    onChange={e => setContrasena(e.target.value)}
+                    placeholder="Minimo 8 caracteres"
                     required
-                    autoComplete="email"
+                    autoComplete="new-password"
+                  />
+                </div>
+
+                <div style={{ marginBottom: '28px' }}>
+                  <label style={{
+                    display: 'block',
+                    fontFamily: "'Inter',sans-serif",
+                    fontSize: '11px', fontWeight: '700',
+                    letterSpacing: '1.8px', textTransform: 'uppercase',
+                    color: 'rgba(255,255,255,0.5)',
+                    marginBottom: '7px',
+                  }} translate="no">
+                    Confirmar contrasena
+                  </label>
+                  <input
+                    className="rp-input"
+                    type="password"
+                    value={confirmar}
+                    onChange={e => setConfirmar(e.target.value)}
+                    placeholder="Repite la contrasena"
+                    required
+                    autoComplete="new-password"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="oc-btn"
+                  className="rp-btn"
                   translate="no"
                 >
-                  {loading ? 'Enviando solicitud...' : 'Solicitar restablecimiento'}
+                  {loading ? 'Guardando...' : 'Establecer nueva contrasena'}
                 </button>
               </form>
 
-              {/* Volver */}
               <button
-                className="oc-back-btn"
+                className="rp-back-btn"
                 onClick={() => navigate('/login')}
                 translate="no"
               >
@@ -327,7 +371,6 @@ export default function OlvideContrasenaPage() {
             </>
           )}
 
-          {/* Footer */}
           <p style={{
             textAlign: 'center', marginTop: '24px',
             fontFamily: "'Inter',sans-serif", fontSize: '10px',
