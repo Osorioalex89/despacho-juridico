@@ -253,6 +253,36 @@ export const sendResetRequestToAdmin = async ({ toAdmins, clienteNombre, cliente
   }
 }
 
+// ── Enviar link de reset de contraseña al cliente (Flujo B) ──────
+export const sendResetLinkToClient = async ({ to, nombre, resetUrl }) => {
+  const contenido = `
+    <h2 class="greeting">Hola, ${nombre}</h2>
+    <p class="intro">
+      El despacho ha aprobado tu solicitud de restablecimiento de contrase&#241;a.
+      Haz clic en el bot&#243;n de abajo para establecer una nueva contrase&#241;a.
+      El enlace es v&#225;lido por <strong style="color:rgba(255,255,255,0.75)">2 horas</strong>.
+    </p>
+
+    <a href="${resetUrl}" class="verify-btn">Establecer nueva contrase&#241;a</a>
+
+    <div class="otp-box" style="margin-bottom:20px;">
+      <p class="otp-label">O copia este enlace en tu navegador</p>
+      <p style="font-size:11px;color:rgba(201,168,76,0.7);word-break:break-all;margin:0;line-height:1.6;">${resetUrl}</p>
+    </div>
+
+    <p style="font-size:13px;color:rgba(255,255,255,0.3);margin:0 0 20px;line-height:1.6;">
+      Si no solicitaste este cambio, ignora este correo. Tu contrase&#241;a actual sigue siendo v&#225;lida.
+    </p>
+  `
+
+  await transporter.sendMail({
+    from: `"Despacho Jurídico · Lic. Sánchez" <${process.env.GMAIL_USER}>`,
+    to,
+    subject: 'Restablece tu contraseña — Despacho Jurídico',
+    html: emailBase('Restablece tu contrase&#241;a', contenido),
+  })
+}
+
 // ── Enviar contraseña temporal al cliente ─────────────────────────
 export const sendNewPasswordToClient = async ({ to, nombre, contrasena }) => {
   const contenido = `

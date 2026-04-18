@@ -18,6 +18,7 @@ import PendientePage from '../features/auth/PendientePage'
 import OtpPage from '../features/auth/OtpPage'
 import VerificarEmailPage from '../features/auth/VerificarEmailPage'
 import OlvideContrasenaPage from '../features/auth/OlvideContrasenaPage'
+import ResetPasswordPage from '../features/auth/ResetPasswordPage'
 import MisCasosPage from '../features/clientportal/MisCasosPage'
 import DocumentosPage from '../features/documents/DocumentosPage'
 import ClientDetail from '../features/clients/ClientDetail'
@@ -82,6 +83,7 @@ export default function AppRouter() {
         <Route path="/verificar-otp"       element={<OtpPage />} />
         <Route path="/verificar-email"     element={<VerificarEmailPage />} />
         <Route path="/olvide-contrasena"   element={<OlvideContrasenaPage />} />
+        <Route path="/reset-password"      element={<ResetPasswordPage />} />
 
         {/* ── Usuario pendiente de aprobación ── */}
         <Route path="/pendiente" element={

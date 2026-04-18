@@ -84,6 +84,8 @@ async function runMigrations() {
     "ALTER TABLE usuarios ADD COLUMN origen VARCHAR(50) NULL DEFAULT NULL",
     "ALTER TABLE citas ADD COLUMN mensaje TEXT NULL",
     "ALTER TABLE citas ADD COLUMN id_solicitante INT NULL",
+    "ALTER TABLE usuarios ADD COLUMN reset_token VARCHAR(64) NULL",
+    "ALTER TABLE usuarios ADD COLUMN reset_token_expires DATETIME NULL",
   ]
   for (const q of migrations) {
     try {

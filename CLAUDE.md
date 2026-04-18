@@ -46,7 +46,8 @@ GET  /api/auth/verificar-email       → ?token=xxx → activo:true (idempotente
 POST /api/auth/login                 → Paso 1 OTP → { requiresOtp, tempToken, maskedEmail }
 POST /api/auth/verify-otp            → Paso 2 OTP → { token, user }
 POST /api/auth/solicitar-reset       → público; notifica admins
-POST /api/auth/admin-reset-password  → protegido (abogado/secretario); genera contraseña temporal automática y la envía al correo del cliente [Flujo A temporal — pendiente migrar a Flujo B: self-service token con link]
+POST /api/auth/admin-reset-password  → protegido (abogado/secretario); genera reset_token (2h) y envía link al cliente [Flujo B]
+POST /api/auth/reset-password        → público; valida reset_token, actualiza contraseña, limpia token
 CRUD /api/clientes · /api/casos · /api/citas · /api/documentos · /api/usuarios
 PATCH /api/documentos/:id/toggle-bloqueo
 GET  /api/documentos/mis-documentos/:id/preview  → cliente; inline si desbloqueado
@@ -230,10 +231,12 @@ Los documentos se almacenan en Cloudinary (no en disco — Railway filesystem es
 
 ## Pendientes técnicos
 
-### Recuperación de contraseña — Flujo A implementado (pendiente Flujo B)
-- **Flujo A actual ✅:** cliente solicita reset → admin aprueba en panel → sistema genera contraseña temporal automática (`Tmp-XXXXXXXX`) → se envía al correo del cliente con la contraseña visible
-- **Flujo B pendiente:** admin aprueba → se genera token con expiración → email con link al cliente → cliente establece su propia contraseña en `/reset-password?token=xxx`
-  - Requiere: columna `reset_token + reset_token_expires` en `usuarios` · 2 rutas nuevas · página nueva en frontend
+### Recuperación de contraseña — Flujo B implementado ✅
+- **Flujo B actual ✅:** cliente solicita reset → admin aprueba en panel → sistema genera `reset_token` (64 hex) con expiración **2 horas** → email con link al cliente → cliente establece su propia contraseña en `/reset-password?token=xxx`
+  - **Backend:** columnas `reset_token VARCHAR(64)` + `reset_token_expires DATETIME` en `usuarios` (migración idempotente en `app.js`) · `POST /api/auth/admin-reset-password` genera token y envía link · `POST /api/auth/reset-password` (público) valida token y actualiza contraseña
+  - **Frontend:** `ResetPasswordPage.jsx` en `/reset-password?token=xxx` · ruta registrada en `AppRouter.jsx`
+  - **Email:** `sendResetLinkToClient` en `emailService.js` — plantilla Navy/Gold con botón y fallback URL
+- **Flujo A legacy** (`sendNewPasswordToClient`) se conserva en `emailService.js` pero ya no se usa en el flujo activo
 
 ### Persistencia del historial del Chat IA ✅
 Historial persistido en BD, aislado por usuario. El chat sobrevive refresco y es auditable por caso.

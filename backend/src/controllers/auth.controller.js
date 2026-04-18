@@ -7,6 +7,7 @@ import {
   sendVerificationEmail,
   sendResetRequestToAdmin,
   sendNewPasswordToClient,
+  sendResetLinkToClient,
   notifyAdminNewUser,
 } from '../services/emailService.js'
 
@@ -315,8 +316,8 @@ export const solicitarReset = async (req, res) => {
 }
 
 // ── POST /api/auth/admin-reset-password ───────────────────────────
-// Ruta protegida (abogado/secretario): genera contraseña temporal automática,
-// la asigna al usuario, limpia el flag de reset y la envía por correo al cliente.
+// Ruta protegida (abogado/secretario): genera token de reset con expiración 2h,
+// limpia el flag de solicitud y envía el link al correo del cliente (Flujo B).
 export const adminResetPassword = async (req, res) => {
   try {
     const { id_usuario } = req.body
@@ -330,31 +331,68 @@ export const adminResetPassword = async (req, res) => {
       return res.status(404).json({ message: 'Usuario no encontrado' })
     }
 
-    // Generar contraseña temporal: prefijo fijo + 8 chars aleatorios (mayúsc + núm)
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-    const randomPart = Array.from({ length: 8 }, () =>
-      chars[Math.floor(Math.random() * chars.length)]
-    ).join('')
-    const contrasenaTemp = `Tmp-${randomPart}`
+    const resetToken   = generateToken64()
+    const resetExpires = new Date(Date.now() + 2 * 60 * 60 * 1000) // 2 horas
 
-    const hash = await bcrypt.hash(contrasenaTemp, 10)
     await user.update({
-      contrasena:          hash,
       reset_solicitado:    false,
       reset_solicitado_at: null,
+      reset_token:         resetToken,
+      reset_token_expires: resetExpires,
     })
 
-    // Notificar al cliente con la contraseña temporal — fire-and-forget
-    sendNewPasswordToClient({
-      to:        user.correo,
-      nombre:    user.nombre,
-      contrasena: contrasenaTemp,
-    }).catch(err => console.error('Error enviando nueva contraseña al cliente:', err.message))
+    const resetUrl = `${BASE_URL}/reset-password?token=${resetToken}`
 
-    res.json({ message: `Contraseña restablecida correctamente. Se notificó a ${user.correo}.` })
+    sendResetLinkToClient({
+      to:       user.correo,
+      nombre:   user.nombre,
+      resetUrl,
+    }).catch(err => console.error('Error enviando link de reset al cliente:', err.message))
+
+    res.json({ message: `Enlace de restablecimiento enviado a ${user.correo}. Válido por 2 horas.` })
 
   } catch (error) {
     console.error('Error en admin-reset-password:', error.message)
+    res.status(500).json({ message: 'Error interno del servidor' })
+  }
+}
+
+// ── POST /api/auth/reset-password ────────────────────────────────
+// Ruta pública: el cliente usa el token recibido por correo para establecer
+// su nueva contraseña.
+export const resetPassword = async (req, res) => {
+  try {
+    const { token, contrasena } = req.body
+
+    if (!token || !contrasena) {
+      return res.status(400).json({ message: 'Token y nueva contraseña son requeridos' })
+    }
+
+    if (contrasena.length < 8) {
+      return res.status(400).json({ message: 'La contraseña debe tener al menos 8 caracteres' })
+    }
+
+    const user = await User.findOne({ where: { reset_token: token } })
+    if (!user) {
+      return res.status(400).json({ message: 'El enlace no es válido o ya fue utilizado.' })
+    }
+
+    if (!user.reset_token_expires || new Date() > new Date(user.reset_token_expires)) {
+      await user.update({ reset_token: null, reset_token_expires: null })
+      return res.status(400).json({ message: 'El enlace ha expirado. Solicita un nuevo restablecimiento.', expired: true })
+    }
+
+    const hash = await bcrypt.hash(contrasena, 10)
+    await user.update({
+      contrasena:          hash,
+      reset_token:         null,
+      reset_token_expires: null,
+    })
+
+    res.json({ message: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.' })
+
+  } catch (error) {
+    console.error('Error en reset-password:', error.message)
     res.status(500).json({ message: 'Error interno del servidor' })
   }
 }
