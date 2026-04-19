@@ -1,0 +1,24 @@
+{
+  "name": "Despacho Jurídico · Sánchez Cerino",
+  "short_name": "SC Legal",
+  "description": "Sistema de gestión jurídica profesional",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020818",
+  "theme_color": "#C9A84C",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-sc.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-sc.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

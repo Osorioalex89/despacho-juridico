@@ -74,7 +74,7 @@ bg-base: #020818 · card: rgba(8,20,48,0.75) · card-deep: rgba(6,16,40,0.97)
 gold-primary: #C9A84C · gold-light: #E8C97A · gold-dark: #9A7A32
 text-primary: rgba(255,255,255,0.95) · text-secondary: rgba(255,255,255,0.55)
 ```
-**Fuentes:** Playfair Display (títulos) · Inter (UI) · **Logo:** SVG balanza + monograma "SC" gold
+**Fuentes:** Playfair Display (títulos) · Inter (UI) · **Logo:** `logo-sc.png` (sin fondo, creado en nanobanana) — usado en todas las páginas auth (92×92 en card, 80×80 en registro) y en el sidebar (48×48). Contenedor: `borderRadius:12-22` + borde gold + glow gold. `objectFit:'contain'` (nunca `cover`). PWA: `public/manifest.json` con `theme_color:#C9A84C`. Sidebar: PNG reemplazó al SVG LogoMark.
 **Badges estado:** activo=`#93BBFC` · urgente=`#FCA5A5` · pendiente=`#FCD34D` · en_revision=`#C4B5FD` · cerrado=`#9CA3AF`
 **Timeline íconos:** apertura→`Scale` `#C9A84C` · documento→`FileText` `#93BBFC` · cita→`CalendarDays` `#86EFAC` · comentario→`MessageSquare` `#C4B5FD` · movimiento→`Gavel` `#FB923C`
 **Chat IA — diseño "Avatar & Estructura":** tarjetas en lugar de burbujas · IA: borde izquierdo `3px solid rgba(201,168,76,0.5)` + glass blur + avatar `Scale` · Usuario: borde derecho `3px solid rgba(147,187,252,0.45)` + avatar con iniciales en azul · Portal cliente: modal fullscreen 680px (`zIndex:1100`) con botón "Consultar Asistente IA" en tarjeta del caso · Contenedor `height:520px` fijo (no `minHeight`) + scrollbar custom gold 5px · Historial aislado por `id_usuario` — abogado y cliente tienen conversaciones separadas

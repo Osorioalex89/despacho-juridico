@@ -9,35 +9,20 @@ import {
   Calendar, FileText, UserCheck, LogOut,
   ChevronRight, Shield, Globe
 } from 'lucide-react'
+import logoSC from '../../assets/logos/logo-sc.png'
 
-// ── Logo SVG premium — Monograma "SC" con balanza ────────────────
 const LogoMark = () => (
-  <svg viewBox="0 0 44 44" width="42" height="42" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="sbGold" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#E8C97A"/>
-        <stop offset="100%" stopColor="#9A7A32"/>
-      </linearGradient>
-    </defs>
-    <rect width="44" height="44" rx="10" fill="url(#sbGold)" opacity="0.13"/>
-    <rect width="44" height="44" rx="10" fill="none" stroke="url(#sbGold)" strokeWidth="1" strokeOpacity="0.5"/>
-    <rect x="21.2" y="8" width="1.6" height="22" rx="0.8" fill="url(#sbGold)" opacity="0.85"/>
-    <circle cx="22" cy="8.5" r="2.2" fill="url(#sbGold)" opacity="0.95"/>
-    <rect x="9" y="16" width="26" height="1.5" rx="0.75" fill="url(#sbGold)" opacity="0.8"/>
-    <line x1="12" y1="17.5" x2="10" y2="24" stroke="#C9A84C" strokeWidth="1" strokeOpacity="0.65"/>
-    <line x1="12" y1="17.5" x2="14" y2="24" stroke="#C9A84C" strokeWidth="1" strokeOpacity="0.65"/>
-    <ellipse cx="12" cy="24.8" rx="4.5" ry="1.6" fill="url(#sbGold)" opacity="0.75"/>
-    <line x1="32" y1="17.5" x2="30" y2="24" stroke="#C9A84C" strokeWidth="1" strokeOpacity="0.65"/>
-    <line x1="32" y1="17.5" x2="34" y2="24" stroke="#C9A84C" strokeWidth="1" strokeOpacity="0.65"/>
-    <ellipse cx="32" cy="24.8" rx="4.5" ry="1.6" fill="url(#sbGold)" opacity="0.75"/>
-    <text x="22" y="37" textAnchor="middle"
-      fontFamily="Georgia, 'Times New Roman', serif"
-      fontSize="9" fontWeight="700"
-      fill="url(#sbGold)" opacity="0.92" letterSpacing="1.5">
-      SC
-    </text>
-    <rect x="17" y="30" width="10" height="1.4" rx="0.7" fill="url(#sbGold)" opacity="0.6"/>
-  </svg>
+  <div style={{
+    width: 48, height: 48,
+    borderRadius: 12,
+    background: 'rgba(6,16,40,0.8)',
+    border: '1px solid rgba(201,168,76,0.35)',
+    boxShadow: '0 0 24px rgba(201,168,76,0.14), inset 0 1px 0 rgba(201,168,76,0.18)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    flexShrink: 0,
+  }}>
+    <img src={logoSC} alt="SC" style={{ width: 36, height: 36, objectFit: 'contain' }} />
+  </div>
 )
 
 const NAV_ITEMS = [
