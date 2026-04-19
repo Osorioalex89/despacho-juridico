@@ -234,16 +234,7 @@ export default function RegisterPage() {
           {/* Logo + Nombre */}
           <div style={{textAlign:'center',marginBottom:'14px'}}>
             <div style={{display:'inline-flex',alignItems:'center',justifyContent:'center',marginBottom:'10px'}}>
-              <div style={{
-                width: 80, height: 80,
-                borderRadius: 20,
-                background: 'rgba(6,16,40,0.7)',
-                border: '1px solid rgba(201,168,76,0.32)',
-                boxShadow: '0 0 32px rgba(201,168,76,0.14), inset 0 1px 0 rgba(201,168,76,0.2)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <img src={logoSC} alt="Sánchez Cerino" style={{ width: 62, height: 62, objectFit: 'contain' }} />
-              </div>
+              <img src={logoSC} alt="Sánchez Cerino" style={{ width: 84, height: 84, objectFit: 'contain', filter: 'drop-shadow(0 0 16px rgba(201,168,76,0.4))' }} />
             </div>
             <h1 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:'19px',fontWeight:'700',color:'rgba(255,255,255,0.97)',margin:'0 0 4px',textShadow:'0 2px 8px rgba(0,0,0,0.4)',lineHeight:1.2}}>
               Lic. Horacio{' '}

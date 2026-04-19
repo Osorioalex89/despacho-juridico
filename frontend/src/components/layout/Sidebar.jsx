@@ -12,17 +12,7 @@ import {
 import logoSC from '../../assets/logos/logo-sc.png'
 
 const LogoMark = () => (
-  <div style={{
-    width: 48, height: 48,
-    borderRadius: 12,
-    background: 'rgba(6,16,40,0.8)',
-    border: '1px solid rgba(201,168,76,0.35)',
-    boxShadow: '0 0 24px rgba(201,168,76,0.14), inset 0 1px 0 rgba(201,168,76,0.18)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
-  }}>
-    <img src={logoSC} alt="SC" style={{ width: 36, height: 36, objectFit: 'contain' }} />
-  </div>
+  <img src={logoSC} alt="SC" style={{ width: 48, height: 48, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 0 10px rgba(201,168,76,0.4))' }} />
 )
 
 const NAV_ITEMS = [
