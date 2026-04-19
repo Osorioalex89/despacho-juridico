@@ -248,16 +248,7 @@ export default function PendientePage() {
         }}>
           <div className="pp-nav-inner" style={{maxWidth:'1200px',margin:'0 auto',padding:'0 32px',height:'64px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
             <div style={{display:'flex',alignItems:'center',gap:'12px'}}>
-              <div style={{
-                width: 48, height: 48,
-                borderRadius: 12,
-                background: 'rgba(6,16,40,0.7)',
-                border: '1px solid rgba(201,168,76,0.32)',
-                boxShadow: '0 0 20px rgba(201,168,76,0.12)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <img src={logoSC} alt="Sánchez Cerino" style={{ width: 36, height: 36, objectFit: 'contain' }} />
-              </div>
+              <img src={logoSC} alt="Sánchez Cerino" style={{ width: 44, height: 44, objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(201,168,76,0.4))' }} />
               <div>
                 <p style={{fontFamily:"'Playfair Display',serif",fontSize:'14px',fontWeight:'700',color:'rgba(255,255,255,0.97)',margin:'0 0 1px',textShadow:'0 1px 4px rgba(0,0,0,0.3)'}}>
                   Lic. Horacio <span style={{color:'#C9A84C'}}>Sánchez Cerino</span>
