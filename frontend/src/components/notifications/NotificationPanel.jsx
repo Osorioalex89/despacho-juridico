@@ -29,9 +29,6 @@ export default function NotificationPanel({ onClose }) {
 
   return (
     <div style={{
-      position: 'absolute',
-      top: '100%',
-      right: 0,
       width: 340,
       maxHeight: 420,
       overflowY: 'auto',
@@ -41,8 +38,6 @@ export default function NotificationPanel({ onClose }) {
       boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
       backdropFilter: 'blur(12px)',
       WebkitBackdropFilter: 'blur(12px)',
-      zIndex: 200,
-      marginTop: 8,
     }}>
       {/* Header */}
       <div style={{

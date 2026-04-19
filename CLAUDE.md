@@ -154,6 +154,7 @@ Producción: `frontend/.env.production` con URLs reales (Vite lo aplica en `npm 
 | Feature | Archivos clave |
 |---------|----------------|
 | **Notificaciones SSE en tiempo real** campana con badge + panel dropdown glassmorphism; reconexión auto 5s; eventos: comentario, movimiento, cita, documento, caso | `notificationService.js` · `GET /api/notificaciones/stream?token=` · `NotificationsContext.jsx` · `NotificationBell.jsx` · `NotificationPanel.jsx` |
+| **Themis — Agente Jurídico IA** nombre + personalidad de abogado senior; medallón SVG Navy/Gold con "S" + red neuronal + arco de texto; sistema prompt con `userName` dinámico; Biblioteca del Despacho inyecta casos cerrados del mismo tipo | `ThemisAvatar.jsx` · `aiService.js` (`chatConCaso`) · `CaseDetail.jsx` · `MisCasosPage.jsx` |
 | **Auth 2FA** OTP 10min · JWT 2h · 3 intentos | `auth.controller.js` · `OtpPage.jsx` |
 | **Análisis Documental IA** auto al subir + botón "Resumen IA" | `aiService.js` · `DocumentosPage.jsx` · `MisCasosPage.jsx` |
 | **Timeline visual** apertura/docs/citas/comentarios/movimientos | `GET /api/casos/:id/timeline` · `CaseTimeline.jsx` |

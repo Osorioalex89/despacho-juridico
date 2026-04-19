@@ -4,6 +4,7 @@ import { useToast, Toast } from '../../components/ui/Toast'
 import { useAuth } from '../../context/AuthContext'
 import ReactMarkdown from 'react-markdown'
 import { getMisDocumentos }            from '../documents/documentsService'
+import ThemisAvatar from '../../components/ui/ThemisAvatar'
 import {
   FolderOpen, Clock, CheckCircle, XCircle,
   AlertCircle, FileText, Calendar, CalendarDays,
@@ -797,21 +798,19 @@ export default function MisCasosPage() {
           >
             {/* Header */}
             <div style={{ padding:'14px 18px', borderBottom:'1px solid rgba(201,168,76,0.1)', background:'rgba(201,168,76,0.03)', display:'flex', alignItems:'center', gap:'10px', flexShrink:0 }}>
-              <div style={{ width:'32px', height:'32px', borderRadius:'8px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.25)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <Scale size={15} style={{ color:'#C9A84C' }}/>
-              </div>
+              <ThemisAvatar size={34} />
               <div style={{ flex:1, minWidth:0 }}>
                 <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'14px', fontWeight:'700', color:'rgba(255,255,255,0.92)', margin:0 }}>
-                  Asistente Jurídico IA
+                  Themis
                 </p>
                 <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(201,168,76,0.55)', margin:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                  {chatModal.folio} · {chatModal.asunto}
+                  {chatModal.folio} · Expediente indexado
                 </p>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:'4px', background:'rgba(34,197,94,0.08)', border:'1px solid rgba(34,197,94,0.18)', borderRadius:'20px', padding:'3px 9px' }}>
                   <span style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#22C55E', animation:'mcPulse 2s ease infinite', display:'inline-block' }}/>
-                  <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(134,239,172,0.8)', fontWeight:'600' }}>En línea</span>
+                  <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(134,239,172,0.8)', fontWeight:'600' }}>Themis · Agente Activo</span>
                 </div>
                 <button onClick={closeChatModal} style={{ width:'30px', height:'30px', borderRadius:'7px', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', color:'rgba(255,255,255,0.5)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
                   <X size={14}/>
@@ -822,14 +821,14 @@ export default function MisCasosPage() {
             {/* Mensajes */}
             <div style={{ flex:1, overflowY:'auto', padding:'18px', display:'flex', flexDirection:'column', gap:'10px' }}>
               {(chatHistoryMap[chatModal.id_caso] || []).length === 0 && !chatLoading && (
-                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:'14px' }}>
-                  <div style={{ width:'48px', height:'48px', borderRadius:'12px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.18)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                    <Scale size={22} style={{ color:'rgba(201,168,76,0.5)' }}/>
-                  </div>
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:'16px', padding:'0 12px' }}>
+                  <ThemisAvatar size={72} pulse />
                   <div style={{ textAlign:'center' }}>
-                    <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'14px', color:'rgba(255,255,255,0.4)', margin:'0 0 6px' }}>Asistente listo</p>
-                    <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.25)', margin:0, maxWidth:'280px', lineHeight:1.7 }}>
-                      Pregunta sobre el estado de tu caso, documentos pendientes, próximas citas o plazos.
+                    <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'15px', fontWeight:'700', color:'rgba(255,255,255,0.75)', margin:'0 0 8px' }}>
+                      Themis · Agente Jurídico
+                    </p>
+                    <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.35)', margin:0, maxWidth:'280px', lineHeight:1.75 }}>
+                      He indexado el expediente <span style={{ color:'rgba(201,168,76,0.7)', fontWeight:'600' }}>{chatModal.folio}</span>. ¿En qué le puedo ayudar hoy?
                     </p>
                   </div>
                 </div>
@@ -837,13 +836,13 @@ export default function MisCasosPage() {
               {(chatHistoryMap[chatModal.id_caso] || []).map((msg, i) => (
                 <div key={i} style={{ display:'flex', flexDirection:'column', gap:'3px', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                   <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'600', letterSpacing:'0.8px', textTransform:'uppercase', color: msg.role === 'user' ? 'rgba(147,187,252,0.5)' : 'rgba(201,168,76,0.5)', paddingLeft: msg.role === 'user' ? 0 : '4px', paddingRight: msg.role === 'user' ? '4px' : 0 }}>
-                    {msg.role === 'user' ? userInitials : 'Asistente IA'}
+                    {msg.role === 'user' ? userInitials : 'Themis'}
                   </span>
                   <div style={{ width:'100%', maxWidth:'92%', display:'flex', alignItems:'flex-start', gap:'8px', flexDirection: msg.role === 'user' ? 'row-reverse' : 'row' }}>
                     <div style={{ flexShrink:0, width:'28px', height:'28px', borderRadius:'7px', display:'flex', alignItems:'center', justifyContent:'center', background: msg.role === 'user' ? 'rgba(59,130,246,0.15)' : 'rgba(201,168,76,0.1)', border: msg.role === 'user' ? '1px solid rgba(59,130,246,0.25)' : '1px solid rgba(201,168,76,0.22)' }}>
                       {msg.role === 'user'
                         ? <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'9px', fontWeight:'700', color:'#93BBFC' }}>{userInitials}</span>
-                        : <Scale size={12} style={{ color:'#C9A84C' }}/>
+                        : <ThemisAvatar size={22} />
                       }
                     </div>
                     <div style={{
@@ -872,10 +871,10 @@ export default function MisCasosPage() {
               ))}
               {chatLoading && (
                 <div style={{ display:'flex', flexDirection:'column', gap:'3px', alignItems:'flex-start' }}>
-                  <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'600', letterSpacing:'0.8px', textTransform:'uppercase', color:'rgba(201,168,76,0.5)', paddingLeft:'4px' }}>Asistente IA</span>
+                  <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'600', letterSpacing:'0.8px', textTransform:'uppercase', color:'rgba(201,168,76,0.5)', paddingLeft:'4px' }}>Themis</span>
                   <div style={{ display:'flex', alignItems:'flex-start', gap:'8px' }}>
-                    <div style={{ flexShrink:0, width:'28px', height:'28px', borderRadius:'7px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.22)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <Scale size={12} style={{ color:'#C9A84C' }}/>
+                    <div style={{ flexShrink:0, width:'28px', height:'28px', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <ThemisAvatar size={26} pulse />
                     </div>
                     <div style={{ padding:'10px 14px', borderRadius:'4px 11px 11px 11px', borderTop:'1px solid rgba(201,168,76,0.1)', borderBottom:'1px solid rgba(201,168,76,0.1)', borderRight:'1px solid rgba(201,168,76,0.1)', borderLeft:'3px solid rgba(201,168,76,0.35)', background:'rgba(8,20,48,0.55)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', gap:'8px' }}>
                       <Loader2 size={13} style={{ color:'#C9A84C', animation:'spin 1s linear infinite', flexShrink:0 }}/>

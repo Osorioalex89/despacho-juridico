@@ -482,16 +482,26 @@ export const chatCaso = async (req, res) => {
     }
 
     const Document = (await import('../models/Document.js')).default
-    const [movimientos, documentos] = await Promise.all([
+    const [movimientos, documentos, casosReferencia, userRecord] = await Promise.all([
       Movimiento.findAll({ where: { id_caso: id }, order: [['fecha_movimiento','DESC']], limit: 10 }),
       Document.findAll({ where: { id_caso: id }, limit: 20 }),
+      // Casos cerrados del mismo tipo → "Biblioteca del Despacho"
+      Case.findAll({
+        where: { tipo: caso.tipo, estado: 'cerrado', id_caso: { [Op.ne]: id } },
+        attributes: ['folio', 'asunto', 'reporte_ia'],
+        order: [['updatedAt', 'DESC']],
+        limit: 3,
+      }),
+      User.findByPk(req.user.id, { attributes: ['nombre'] }),
     ])
+
+    const userName = userRecord?.nombre || 'Abogado'
 
     // Solo los últimos 10 mensajes se envían a Groq (control de tokens)
     const historialReciente = historial.slice(-10)
 
     const { chatConCaso } = await import('../services/aiService.js')
-    const respuesta = await chatConCaso({ caso, movimientos, documentos, historial: historialReciente, pregunta: pregunta.trim() })
+    const respuesta = await chatConCaso({ caso, movimientos, documentos, historial: historialReciente, pregunta: pregunta.trim(), casosReferencia, userName })
 
     // Persistir user + assistant en BD (fire-and-forget, no bloquea la respuesta)
     ChatMensaje.bulkCreate([
