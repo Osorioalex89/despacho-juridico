@@ -41,6 +41,7 @@ movimientos → id_movimiento, id_caso[FK→CASCADE], tipo[ENUM], descripcion[TE
 
 ### Rutas API principales
 ```
+GET  /api/notificaciones/stream     → ?token=JWT → text/event-stream SSE; heartbeat `:ping` cada 25s; token en query param (EventSource no soporta headers)
 POST /api/auth/registro              → usuario inactivo + email verificación
 GET  /api/auth/verificar-email       → ?token=xxx → activo:true (idempotente)
 POST /api/auth/login                 → Paso 1 OTP → { requiresOtp, tempToken, maskedEmail }
@@ -152,6 +153,7 @@ Producción: `frontend/.env.production` con URLs reales (Vite lo aplica en `npm 
 
 | Feature | Archivos clave |
 |---------|----------------|
+| **Notificaciones SSE en tiempo real** campana con badge + panel dropdown glassmorphism; reconexión auto 5s; eventos: comentario, movimiento, cita, documento, caso | `notificationService.js` · `GET /api/notificaciones/stream?token=` · `NotificationsContext.jsx` · `NotificationBell.jsx` · `NotificationPanel.jsx` |
 | **Auth 2FA** OTP 10min · JWT 2h · 3 intentos | `auth.controller.js` · `OtpPage.jsx` |
 | **Análisis Documental IA** auto al subir + botón "Resumen IA" | `aiService.js` · `DocumentosPage.jsx` · `MisCasosPage.jsx` |
 | **Timeline visual** apertura/docs/citas/comentarios/movimientos | `GET /api/casos/:id/timeline` · `CaseTimeline.jsx` |

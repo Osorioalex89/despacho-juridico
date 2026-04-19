@@ -26,7 +26,9 @@
       "Bash(node -e ':*)",
       "Bash(npm create:*)",
       "Bash(npm install:*)",
-      "Bash(node -e \"const p=require\\('./package.json'\\); const deps={...p.dependencies,...p.devDependencies}; ['tailwindcss','@tailwindcss/vite','framer-motion','lucide-react'].forEach\\(d => console.log\\(d+':', deps[d]||'NO'\\)\\)\")"
+      "Bash(node -e \"const p=require\\('./package.json'\\); const deps={...p.dependencies,...p.devDependencies}; ['tailwindcss','@tailwindcss/vite','framer-motion','lucide-react'].forEach\\(d => console.log\\(d+':', deps[d]||'NO'\\)\\)\")",
+      "Bash(powershell.exe -Command 'Add-Type -AssemblyName System.Drawing; $img = [System.Drawing.Image]::FromFile\\('\\\\''C:\\\\Users\\\\alexa\\\\OneDrive\\\\Documentos\\\\despacho-juridico\\\\.claude\\\\worktrees\\\\naughty-snyder-0fecd4\\\\frontend\\\\public\\\\logo-sc2.png'\\\\''\\); $img.Width; $img.Height; $img.Dispose\\(\\)')",
+      "Bash(powershell.exe -Command ' *)"
     ]
   },
   "enableAllProjectMcpServers": true,

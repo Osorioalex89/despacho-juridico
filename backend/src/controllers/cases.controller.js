@@ -7,6 +7,7 @@ import User        from '../models/User.js'
 import Movimiento  from '../models/Movimiento.js'
 import ChatMensaje from '../models/ChatMensaje.js'
 import { notifyNewCaseComment, notifyMovimientoProcesal, notifyNuevoCasoAsignado } from '../services/emailService.js'
+import { notifyUsers, notifyAdmins } from '../services/notificationService.js'
 
 // GET /api/casos
 export const getCasos = async (req, res) => {
@@ -108,6 +109,18 @@ export const createCaso = async (req, res) => {
 
     res.status(201).json({ message: 'Caso creado exitosamente', caso })
 
+    // SSE: notificar al cliente en tiempo real
+    if (caso.id_cliente) {
+      notifyUsers([caso.id_cliente], {
+        tipo:   'caso:asignado',
+        titulo: 'Nuevo caso asignado',
+        mensaje: `Folio ${caso.folio} — ${caso.asunto}`,
+        link:   '/cliente/mis-casos',
+        icono:  'FolderOpen',
+        color:  '#93BBFC',
+      })
+    }
+
     // Notificar al cliente — fire-and-forget
     if (caso.id_cliente) {
       Client.findByPk(caso.id_cliente).then(cliente => {
@@ -189,6 +202,21 @@ export const addComentario = async (req, res) => {
     })
 
     res.status(201).json({ message: 'Comentario agregado', comentario })
+
+    // SSE: notificar en tiempo real
+    const receptoresSSE = []
+    if (caso.id_cliente) receptoresSSE.push(caso.id_cliente)
+    if (caso.id_abogado && caso.id_abogado !== req.user.id) receptoresSSE.push(caso.id_abogado)
+    if (receptoresSSE.length > 0) {
+      notifyUsers(receptoresSSE, {
+        tipo:   'comentario:nuevo',
+        titulo: 'Nuevo comentario en caso',
+        mensaje: `${caso.folio} — ${contenido.trim().substring(0, 80)}`,
+        link:   `/panel/casos/${caso.id_caso}`,
+        icono:  'MessageSquare',
+        color:  '#C4B5FD',
+      })
+    }
 
     // Notificar a cliente y (si corresponde) al abogado — fire-and-forget
     Promise.all([
@@ -385,6 +413,18 @@ export const addMovimiento = async (req, res) => {
     }
 
     res.status(201).json({ message: 'Movimiento registrado', movimiento })
+
+    // SSE: notificar al cliente en tiempo real
+    if (caso.id_cliente) {
+      notifyUsers([caso.id_cliente], {
+        tipo:   'movimiento:registrado',
+        titulo: 'Nuevo movimiento procesal',
+        mensaje: `${caso.folio} — ${descripcion.trim().substring(0, 80)}`,
+        link:   '/cliente/mis-casos',
+        icono:  'Gavel',
+        color:  '#FB923C',
+      })
+    }
   } catch (error) {
     console.error('Error al registrar movimiento:', error.message)
     res.status(500).json({ message: 'Error interno del servidor' })

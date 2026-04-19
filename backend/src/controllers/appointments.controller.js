@@ -8,6 +8,7 @@ import {
   updateAppointmentStatus,
   notifyAppointmentRescheduled,
 } from '../services/emailService.js'
+import { notifyUsers, notifyAdmins } from '../services/notificationService.js'
 
 export const getCitas = async (req, res) => {
   try {
@@ -54,6 +55,19 @@ export const createCita = async (req, res) => {
     })
 
     res.status(201).json({ message: 'Cita creada exitosamente', cita })
+
+    // SSE: notificar a cliente y abogado en tiempo real
+    const receps = [id_cliente, id_abogado].filter(Boolean)
+    if (receps.length) {
+      notifyUsers(receps, {
+        tipo:   'cita:creada',
+        titulo: 'Nueva cita agendada',
+        mensaje: `${fecha} ${hora} — ${motivo}`,
+        link:   req.user?.rol === 'cliente' ? '/cliente/mis-citas' : '/panel/agenda',
+        icono:  'CalendarDays',
+        color:  '#86EFAC',
+      })
+    }
 
     // Notificar — fire-and-forget
     Promise.all([
@@ -171,6 +185,17 @@ export const updateEstadoCita = async (req, res) => {
     }
 
     res.json({ message: 'Estado actualizado', cita })
+
+    // SSE: notificar al cliente y abogado del cambio de estado
+    const titulo = estado === 'confirmada' ? 'Cita confirmada' : 'Cita cancelada'
+    notifyUsers([cita.id_cliente, cita.id_abogado].filter(Boolean), {
+      tipo:   `cita:${estado}`,
+      titulo,
+      mensaje: `${String(cita.fecha).slice(0, 10)} ${cita.hora}`,
+      link:   req.user?.rol === 'cliente' ? '/cliente/mis-citas' : '/panel/agenda',
+      icono:  'CalendarDays',
+      color:  estado === 'confirmada' ? '#86EFAC' : '#FCA5A5',
+    })
   } catch (error) {
     res.status(500).json({ message: 'Error interno del servidor' })
   }
