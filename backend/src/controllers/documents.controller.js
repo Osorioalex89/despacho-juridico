@@ -5,6 +5,7 @@ import { analizarDocumento } from '../services/aiService.js'
 import Case                from '../models/Case.js'
 import Client              from '../models/Client.js'
 import { notifyDocumentoAdjunto } from '../services/emailService.js'
+import { notifyUsers } from '../services/notificationService.js'
 
 // Sube un buffer a Cloudinary y retorna el public_id
 const subirACloudinary = (buffer, publicId) =>
@@ -62,6 +63,20 @@ export const uploadDocumento = async (req, res) => {
     })
 
     res.status(201).json({ message: 'Documento subido correctamente', documento: doc })
+
+    // SSE: notificar al cliente del caso en tiempo real
+    Case.findByPk(id_caso).then(caso => {
+      if (caso?.id_cliente) {
+        notifyUsers([caso.id_cliente], {
+          tipo:   'documento:subido',
+          titulo: 'Nuevo documento en tu caso',
+          mensaje: req.file?.originalname || doc.nombre,
+          link:   '/cliente/mis-casos',
+          icono:  'FileText',
+          color:  '#93BBFC',
+        })
+      }
+    }).catch(() => {})
 
     // Análisis IA — fire-and-forget (buffer todavía disponible)
     if (process.env.GROQ_API_KEY) {
@@ -180,8 +195,25 @@ export const toggleBloqueo = async (req, res) => {
     const doc = await Document.findByPk(req.params.id)
     if (!doc) return res.status(404).json({ message: 'Documento no encontrado' })
 
+    const estabaBloqueado = doc.bloqueado
     await doc.update({ bloqueado: !doc.bloqueado })
     res.json({ documento: doc })
+
+    // SSE: notificar al cliente si el documento se desbloqueó
+    if (estabaBloqueado && doc.id_caso) {
+      Case.findByPk(doc.id_caso).then(caso => {
+        if (caso?.id_cliente) {
+          notifyUsers([caso.id_cliente], {
+            tipo:   'documento:desbloqueado',
+            titulo: 'Documento disponible',
+            mensaje: `${doc.nombre_original || doc.nombre} está disponible para descarga`,
+            link:   '/cliente/mis-casos',
+            icono:  'Unlock',
+            color:  '#86EFAC',
+          })
+        }
+      }).catch(() => {})
+    }
   } catch (error) {
     res.status(500).json({ message: 'Error interno del servidor' })
   }

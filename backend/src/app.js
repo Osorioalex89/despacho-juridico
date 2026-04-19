@@ -14,7 +14,8 @@ import appointmentRoutes from './routes/appointments.routes.js'
 import userRoutes        from './routes/users.routes.js'
 import documentRoutes    from './routes/documents.routes.js'
 import statsRoutes       from './routes/stats.routes.js'
-import landingRoutes     from './routes/landing.routes.js'
+import landingRoutes        from './routes/landing.routes.js'
+import notificationRoutes  from './routes/notifications.routes.js'
 import { startReminderWorker } from './workers/reminderWorker.js'
 
 dotenv.config()
@@ -46,7 +47,8 @@ app.use('/api/citas',      appointmentRoutes)
 app.use('/api/usuarios',   userRoutes)
 app.use('/api/documentos', documentRoutes)
 app.use('/api/stats',      statsRoutes)
-app.use('/api/landing',    landingRoutes)
+app.use('/api/landing',        landingRoutes)
+app.use('/api/notificaciones', notificationRoutes)
 
 // NOTA: /uploads NO se sirve como estático para forzar auth en cada descarga.
 // Toda descarga pasa por /api/documentos/:id/descargar o /api/documentos/mis-documentos/:id/descargar

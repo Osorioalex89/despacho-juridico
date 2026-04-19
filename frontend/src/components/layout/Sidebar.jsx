@@ -10,6 +10,7 @@ import {
   ChevronRight, Shield, Globe
 } from 'lucide-react'
 import logoSC from '../../assets/logos/logo-sc.png'
+import NotificationBell from '../notifications/NotificationBell'
 
 const LogoMark = () => (
   <img src={logoSC} alt="SC" style={{ width: 48, height: 48, objectFit: 'contain', flexShrink: 0, filter: 'drop-shadow(0 0 10px rgba(201,168,76,0.4))' }} />
@@ -256,37 +257,42 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose = () => {}
             </svg>
           </button>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '13px' }}>
-            <LogoMark/>
-            <div>
-              <p style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: '15.5px', fontWeight: '700',
-                color: 'rgba(255,255,255,0.97)',
-                margin: '0 0 1px', lineHeight: 1.2,
-                textShadow: '0 1px 4px rgba(0,0,0,0.4)',
-              }}>
-                Lic. Horacio
-              </p>
-              <p style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: '14px', fontWeight: '600',
-                color: '#C9A84C',
-                margin: '0 0 4px', lineHeight: 1.2,
-              }}>
-                Sánchez Cerino
-              </p>
-              <p style={{
-                fontFamily: "'Inter', sans-serif",
-                fontSize: '10px', fontWeight: '700',
-                color: 'rgba(201,168,76,0.6)',
-                margin: 0,
-                letterSpacing: '2.2px',
-                textTransform: 'uppercase',
-              }}>
-                Asesoría Jurídica
-              </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            {/* Logo + Nombre */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '13px' }}>
+              <LogoMark/>
+              <div>
+                <p style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontSize: '15.5px', fontWeight: '700',
+                  color: 'rgba(255,255,255,0.97)',
+                  margin: '0 0 1px', lineHeight: 1.2,
+                  textShadow: '0 1px 4px rgba(0,0,0,0.4)',
+                }}>
+                  Lic. Horacio
+                </p>
+                <p style={{
+                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontSize: '14px', fontWeight: '600',
+                  color: '#C9A84C',
+                  margin: '0 0 4px', lineHeight: 1.2,
+                }}>
+                  Sánchez Cerino
+                </p>
+                <p style={{
+                  fontFamily: "'Inter', sans-serif",
+                  fontSize: '10px', fontWeight: '700',
+                  color: 'rgba(201,168,76,0.6)',
+                  margin: 0,
+                  letterSpacing: '2.2px',
+                  textTransform: 'uppercase',
+                }}>
+                  Asesoría Jurídica
+                </p>
+              </div>
             </div>
+            {/* Campana de notificaciones */}
+            <NotificationBell />
           </div>
           <div style={{
             position: 'absolute', bottom: 0, left: '20px',
