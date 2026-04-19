@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getCasoById, getMovimientos, addMovimiento, chatCaso, getChatHistory } from './casesService'
 import CaseTimeline from './CaseTimeline'
+import ThemisAvatar from '../../components/ui/ThemisAvatar'
 import {
   ArrowLeft, Pencil, FolderOpen, User, Calendar,
   Clock, FileText, MapPin, Scale, AlertCircle,
@@ -532,19 +533,13 @@ export default function CaseDetail() {
                   background:'rgba(201,168,76,0.03)',
                 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                    <div style={{
-                      width:'32px', height:'32px', borderRadius:'8px', flexShrink:0,
-                      background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.25)',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                    }}>
-                      <Scale size={15} style={{ color:'#C9A84C' }}/>
-                    </div>
+                    <ThemisAvatar size={34} />
                     <div>
                       <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'14px', fontWeight:'700', color:'rgba(255,255,255,0.92)', margin:0 }}>
-                        Asistente Jurídico IA
+                        Themis
                       </p>
                       <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(201,168,76,0.55)', margin:0, letterSpacing:'0.5px' }}>
-                        {caso?.folio} · Expediente activo
+                        {caso?.folio} · Expediente indexado
                       </p>
                     </div>
                   </div>
@@ -554,21 +549,21 @@ export default function CaseDetail() {
                     borderRadius:'20px', padding:'3px 10px',
                   }}>
                     <span style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#22C55E', animation:'chatPulse 2s ease infinite', display:'inline-block' }}/>
-                    <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(134,239,172,0.8)', fontWeight:'600' }}>En línea</span>
+                    <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', color:'rgba(134,239,172,0.8)', fontWeight:'600' }}>Themis · Agente Activo</span>
                   </div>
                 </div>
 
                 {/* Mensajes */}
                 <div className="chat-messages-scroll" style={{ flex:1, overflowY:'auto', padding:'20px 20px', display:'flex', flexDirection:'column', gap:'10px', minHeight:0 }}>
                   {chatHistory.length === 0 && (
-                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:'14px' }}>
-                      <div style={{ width:'48px', height:'48px', borderRadius:'12px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.18)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <Scale size={22} style={{ color:'rgba(201,168,76,0.5)' }}/>
-                      </div>
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', flex:1, gap:'16px', padding:'0 12px' }}>
+                      <ThemisAvatar size={72} pulse />
                       <div style={{ textAlign:'center' }}>
-                        <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'14px', color:'rgba(255,255,255,0.4)', margin:'0 0 6px' }}>Asistente listo</p>
-                        <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.25)', margin:0, maxWidth:'280px', lineHeight:1.7 }}>
-                          Pregunta sobre el caso, movimientos, documentos o plazos. El asistente tiene acceso al expediente completo.
+                        <p style={{ fontFamily:"'Playfair Display',serif", fontSize:'15px', fontWeight:'700', color:'rgba(255,255,255,0.75)', margin:'0 0 8px', letterSpacing:'0.3px' }}>
+                          Themis · Agente Jurídico
+                        </p>
+                        <p style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.35)', margin:0, maxWidth:'290px', lineHeight:1.75 }}>
+                          He indexado el expediente completo del <span style={{ color:'rgba(201,168,76,0.7)', fontWeight:'600' }}>{caso?.folio}</span>. ¿En qué punto de la estrategia legal desea que profundicemos?
                         </p>
                       </div>
                     </div>
@@ -577,7 +572,7 @@ export default function CaseDetail() {
                     <div key={i} style={{ display:'flex', flexDirection:'column', gap:'4px', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                       {/* Etiqueta */}
                       <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'600', letterSpacing:'0.8px', textTransform:'uppercase', color: msg.role === 'user' ? 'rgba(147,187,252,0.5)' : 'rgba(201,168,76,0.5)', paddingLeft: msg.role === 'user' ? 0 : '6px', paddingRight: msg.role === 'user' ? '6px' : 0 }}>
-                        {msg.role === 'user' ? userInitials : 'Asistente IA'}
+                        {msg.role === 'user' ? userInitials : 'Themis'}
                       </span>
                       {/* Tarjeta */}
                       <div style={{
@@ -592,7 +587,7 @@ export default function CaseDetail() {
                         }}>
                           {msg.role === 'user'
                             ? <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'700', color:'#93BBFC' }}>{userInitials}</span>
-                            : <Scale size={13} style={{ color:'#C9A84C' }}/>
+                            : <ThemisAvatar size={22} />
                           }
                         </div>
                         {/* Contenido */}
@@ -629,10 +624,10 @@ export default function CaseDetail() {
                   ))}
                   {chatLoading && (
                     <div style={{ display:'flex', flexDirection:'column', gap:'4px', alignItems:'flex-start' }}>
-                      <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'600', letterSpacing:'0.8px', textTransform:'uppercase', color:'rgba(201,168,76,0.5)', paddingLeft:'6px' }}>Asistente IA</span>
+                      <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'10px', fontWeight:'600', letterSpacing:'0.8px', textTransform:'uppercase', color:'rgba(201,168,76,0.5)', paddingLeft:'6px' }}>Themis</span>
                       <div style={{ display:'flex', alignItems:'flex-start', gap:'10px' }}>
-                        <div style={{ flexShrink:0, width:'30px', height:'30px', borderRadius:'8px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.22)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                          <Scale size={13} style={{ color:'#C9A84C' }}/>
+                        <div style={{ flexShrink:0, width:'30px', height:'30px', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                          <ThemisAvatar size={28} pulse />
                         </div>
                         <div style={{ padding:'11px 16px', borderRadius:'4px 12px 12px 12px', borderLeft:'3px solid rgba(201,168,76,0.35)', background:'rgba(8,20,48,0.55)', backdropFilter:'blur(8px)', border:'1px solid rgba(201,168,76,0.1)', display:'flex', alignItems:'center', gap:'8px' }}>
                           <Loader2 size={13} style={{ color:'#C9A84C', animation:'spin 1s linear infinite', flexShrink:0 }}/>

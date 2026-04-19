@@ -107,7 +107,7 @@ Reglas: máximo 3 fechas y 5 puntos principales. Si el documento no está en esp
  *   pregunta:  string — mensaje actual del usuario
  * @returns {string} — respuesta en texto del asistente
  */
-export const chatConCaso = async ({ caso, movimientos = [], documentos = [], historial = [], pregunta }) => {
+export const chatConCaso = async ({ caso, movimientos = [], documentos = [], historial = [], pregunta, casosReferencia = [], userName = 'Abogado' }) => {
   const movText = movimientos.length
     ? movimientos.map(m => `- [${m.tipo}] ${m.descripcion} (${m.fecha_movimiento})`).join('\n')
     : 'Sin movimientos registrados.'
@@ -121,9 +121,26 @@ export const chatConCaso = async ({ caso, movimientos = [], documentos = [], his
       }).join('\n')
     : 'Sin documentos.'
 
-  const systemPrompt = `Eres un asistente jurídico especializado en legislación mexicana, asignado al expediente siguiente. Responde en español, de forma clara y profesional. No inventes datos que no estén en el expediente.
+  const refText = casosReferencia.length
+    ? casosReferencia
+        .filter(c => c.reporte_ia)
+        .map(c => {
+          let resumen = c.reporte_ia
+          try {
+            const parsed = JSON.parse(c.reporte_ia)
+            resumen = parsed.resumen || parsed.proximaAccion || c.reporte_ia
+          } catch { /* ya es texto plano */ }
+          return `- Folio ${c.folio} (${c.asunto}): ${String(resumen).slice(0, 200)}`
+        }).join('\n')
+    : ''
 
-EXPEDIENTE:
+  const bibliotecaSection = refText
+    ? `\nBIBLIOTECA DEL DESPACHO (casos ${caso.tipo} cerrados con éxito):\n${refText}\nUsa esta experiencia como referencia si es relevante para la pregunta, sin mezclar datos de otros expedientes.\n`
+    : ''
+
+  const systemPrompt = `Eres Themis, un Agente de Inteligencia Jurídica asignado exclusivamente al Despacho Sánchez Cerino. Tu tono es el de un abogado asistente senior: formal, preciso, seguro y proactivo. Dirígete siempre al usuario como "${userName}". Responde en español jurídico claro. No inventes datos que no estén en el expediente — si no encuentras la información, dilo con seguridad: "No encuentro esa información en el expediente actual". Siempre que sea posible, sugiere el siguiente paso estratégico al finalizar tu respuesta.
+${bibliotecaSection}
+EXPEDIENTE ASIGNADO:
 Folio: ${caso.folio}
 Asunto: ${caso.asunto}
 Tipo: ${caso.tipo}
