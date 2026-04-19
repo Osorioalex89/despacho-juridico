@@ -329,8 +329,17 @@ export default function OtpPage() {
 
           {/* ── Cabecera con firma ────────────────────────── */}
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <div style={{ display: 'inline-block', marginBottom: '16px' }}>
-              <img src={logoSC} alt="SC" style={{ width: 66, height: 66, borderRadius: 14, objectFit: 'cover' }} />
+            <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '16px' }}>
+              <div style={{
+                width: 92, height: 92,
+                borderRadius: 22,
+                background: 'rgba(6,16,40,0.7)',
+                border: '1px solid rgba(201,168,76,0.32)',
+                boxShadow: '0 0 36px rgba(201,168,76,0.15), inset 0 1px 0 rgba(201,168,76,0.2)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <img src={logoSC} alt="Sánchez Cerino" style={{ width: 72, height: 72, objectFit: 'contain' }} />
+              </div>
             </div>
             <h1 style={{
               fontFamily: "'Playfair Display',Georgia,serif",
