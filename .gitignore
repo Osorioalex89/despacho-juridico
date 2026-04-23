@@ -12,6 +12,7 @@ dist/
 build/
 
 # Archivos de herramientas de desarrollo (Claude Code)
+CLAUDE.md
 .claude/settings.local.json
 .claude/memory.db
 .claude-flow/
