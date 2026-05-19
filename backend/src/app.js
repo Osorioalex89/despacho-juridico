@@ -122,7 +122,21 @@ async function runMigrations() {
     if (!isDuplicateColumn) throw err
   }
 
-  console.log('[Migrations] Columnas y tablas verificadas.')
+  // Corregir nombres de documentos con encoding Latin-1/UTF-8 corrupto
+  const [docs] = await sequelize.query(
+    'SELECT id_documento, nombre_original FROM documentos WHERE nombre_original IS NOT NULL'
+  )
+  for (const doc of docs) {
+    const fixed = Buffer.from(doc.nombre_original, 'latin1').toString('utf8')
+    if (fixed !== doc.nombre_original) {
+      await sequelize.query(
+        'UPDATE documentos SET nombre_original = ? WHERE id_documento = ?',
+        { replacements: [fixed, doc.id_documento] }
+      )
+    }
+  }
+
+  console.log('[Migrations] Columnas, tablas y nombres de documentos verificados.')
 }
 
 // ── Conectar BD e iniciar servidor ────────────────────────────────

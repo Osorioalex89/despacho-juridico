@@ -48,6 +48,7 @@ export const uploadDocumento = async (req, res) => {
     const { id_caso, categoria, descripcion } = req.body
     if (!id_caso) return res.status(400).json({ message: 'id_caso requerido' })
 
+    const nombreOriginal = Buffer.from(req.file.originalname, 'latin1').toString('utf8')
     const publicId = `${Date.now()}-${Math.round(Math.random() * 1e9)}`
     const result   = await subirACloudinary(req.file.buffer, publicId)
 
@@ -55,7 +56,7 @@ export const uploadDocumento = async (req, res) => {
       id_caso,
       id_usuario:      req.user.id,
       nombre:          result.public_id,   // public_id de Cloudinary
-      nombre_original: req.file.originalname,
+      nombre_original: nombreOriginal,
       tipo:            req.file.mimetype,
       tamanio:         req.file.size,
       categoria:       categoria || 'general',
@@ -70,7 +71,7 @@ export const uploadDocumento = async (req, res) => {
         notifyUsers([caso.id_cliente], {
           tipo:   'documento:subido',
           titulo: 'Nuevo documento en tu caso',
-          mensaje: req.file?.originalname || doc.nombre,
+          mensaje: nombreOriginal || doc.nombre,
           link:   '/cliente/mis-casos',
           icono:  'FileText',
           color:  '#93BBFC',
@@ -82,7 +83,7 @@ export const uploadDocumento = async (req, res) => {
     if (process.env.GROQ_API_KEY) {
       analizarDocumento({
         buffer:        req.file.buffer,
-        nombreArchivo: req.file.originalname,
+        nombreArchivo: nombreOriginal,
         tipoArchivo:   req.file.mimetype,
       })
         .then(resultado => doc.update({ analisis: JSON.stringify(resultado) }))
@@ -97,7 +98,7 @@ export const uploadDocumento = async (req, res) => {
             notifyDocumentoAdjunto({
               toCliente:     cliente.correo,
               nombreCliente: cliente.nombre,
-              nombreArchivo: req.file.originalname,
+              nombreArchivo: nombreOriginal,
               categoria:     categoria || 'general',
               folio:         caso.folio,
               asunto:        caso.asunto,
