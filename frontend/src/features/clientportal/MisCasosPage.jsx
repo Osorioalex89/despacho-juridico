@@ -625,23 +625,44 @@ export default function MisCasosPage() {
                                               </span>
                                             )}
                                           </div>
-                                          {ia.resumen && (
-                                            <p style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.7)',margin:'0 0 8px',lineHeight:1.6}}>
-                                              {ia.resumen}
-                                            </p>
+                                          {ia.tipo && (
+                                            <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'8px'}}>
+                                              <span style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',color:'rgba(196,181,253,0.6)',letterSpacing:'1px',textTransform:'uppercase'}}>Tipo:</span>
+                                              <span style={{fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.75)',textTransform:'capitalize'}}>{ia.tipo}</span>
+                                            </div>
                                           )}
-                                          {ia.puntosClave?.length > 0 && (
+                                          {ia.partes?.length > 0 && (
+                                            <div style={{marginBottom:'8px'}}>
+                                              <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'1px',textTransform:'uppercase',color:'rgba(196,181,253,0.6)',margin:'0 0 4px'}}>Partes</p>
+                                              <div style={{display:'flex',flexWrap:'wrap',gap:'5px'}}>
+                                                {ia.partes.map((p,i)=>(
+                                                  <span key={i} style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',color:'rgba(255,255,255,0.65)',background:'rgba(139,92,246,0.1)',border:'1px solid rgba(139,92,246,0.2)',borderRadius:'4px',padding:'2px 8px'}}>{p}</span>
+                                                ))}
+                                              </div>
+                                            </div>
+                                          )}
+                                          {ia.puntosPrincipales?.length > 0 && (
                                             <div>
                                               <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'1px',textTransform:'uppercase',color:'rgba(196,181,253,0.6)',margin:'0 0 5px'}}>
-                                                Puntos clave
+                                                Puntos principales
                                               </p>
                                               <ul style={{listStyle:'none',padding:0,margin:0,display:'flex',flexDirection:'column',gap:'4px'}}>
-                                                {ia.puntosClave.map((p,i) => (
+                                                {ia.puntosPrincipales.map((p,i) => (
                                                   <li key={i} style={{display:'flex',gap:'7px',alignItems:'flex-start',fontFamily:"'Inter',sans-serif",fontSize:'12px',color:'rgba(255,255,255,0.6)',lineHeight:1.5}}>
                                                     <span style={{color:'#C4B5FD',flexShrink:0,marginTop:'1px'}}>&#9679;</span>{p}
                                                   </li>
                                                 ))}
                                               </ul>
+                                            </div>
+                                          )}
+                                          {ia.fechasClave?.length > 0 && (
+                                            <div style={{marginTop:'8px'}}>
+                                              <p style={{fontFamily:"'Inter',sans-serif",fontSize:'10px',fontWeight:'700',letterSpacing:'1px',textTransform:'uppercase',color:'rgba(196,181,253,0.6)',margin:'0 0 4px'}}>Fechas clave</p>
+                                              <div style={{display:'flex',flexWrap:'wrap',gap:'5px'}}>
+                                                {ia.fechasClave.map((f,i)=>(
+                                                  <span key={i} style={{fontFamily:"'Inter',sans-serif",fontSize:'11px',color:'rgba(255,255,255,0.55)',background:'rgba(201,168,76,0.07)',border:'1px solid rgba(201,168,76,0.15)',borderRadius:'4px',padding:'2px 8px'}}>{f}</span>
+                                                ))}
+                                              </div>
                                             </div>
                                           )}
                                         </div>
