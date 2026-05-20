@@ -426,7 +426,7 @@ export default function MisCasosPage() {
                       <div style={{width:'3px',flexShrink:0,background:`linear-gradient(to bottom,${cfg.dot},transparent)`,borderRadius:'14px 0 0 14px'}}/>
 
                       {/* Header */}
-                      <div style={{flex:1}} onClick={()=>toggleCaso(caso.id_caso)}>
+                      <div style={{flex:1,minWidth:0}} onClick={()=>toggleCaso(caso.id_caso)}>
                         <div className="mc-card-hdr">
                           {/* Ícono estado */}
                           <div className="mc-card-icon" style={{
