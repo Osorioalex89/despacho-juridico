@@ -9,6 +9,16 @@ export default function AvisoPrivacidadPage() {
   const version  = '1.0'
   const fecha    = '2 de junio de 2026'
 
+  // Si la pestaña tiene historial dentro de la SPA → volver una página.
+  // Si fue abierta en una pestaña nueva (target=_blank desde el registro o landing)
+  // → intentar cerrarla; si el navegador bloquea window.close, ir a /login.
+  const handleVolver = () => {
+    if (window.history.length > 1) { navigate(-1); return }
+    try { window.close() } catch { /* bloqueado */ }
+    // Si tras 60 ms seguimos aquí (popup no se cerró), fallback al login
+    setTimeout(() => { if (!window.closed) navigate('/login') }, 60)
+  }
+
   return (
     <>
       <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
@@ -28,7 +38,7 @@ export default function AvisoPrivacidadPage() {
         <div style={{ maxWidth:'820px', margin:'0 auto' }}>
 
           {/* Botón volver */}
-          <button onClick={() => navigate(-1)} style={{
+          <button onClick={handleVolver} style={{
             display:'inline-flex', alignItems:'center', gap:'8px',
             background:'transparent', border:'1px solid rgba(201,168,76,0.22)',
             color:'rgba(201,168,76,0.85)', padding:'8px 14px', borderRadius:'10px',
