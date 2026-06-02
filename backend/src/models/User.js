@@ -71,6 +71,12 @@ const User = sequelize.define('Usuario', {
     allowNull:    true,
     defaultValue: null,
   },
+  // F6.1 — Consentimiento LFPDPPP
+  aviso_aceptado_at: { type: DataTypes.DATE,       allowNull: true },
+  aviso_version:     { type: DataTypes.STRING(10), allowNull: true },
+  // F6.2 — Solicitud y materialización de derecho de cancelación (ARCO)
+  cancelacion_solicitada_at: { type: DataTypes.DATE, allowNull: true },
+  anonimizado_at:            { type: DataTypes.DATE, allowNull: true },
 }, {
   tableName:  'usuarios',
   timestamps: true,

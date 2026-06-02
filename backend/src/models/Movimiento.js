@@ -1,5 +1,6 @@
-import { DataTypes } from 'sequelize'
-import sequelize     from '../config/database.js'
+import { DataTypes }          from 'sequelize'
+import sequelize              from '../config/database.js'
+import { applyFieldEncryption } from './encryptedFields.js'
 
 const Movimiento = sequelize.define('Movimiento', {
   id_movimiento: {
@@ -26,6 +27,9 @@ const Movimiento = sequelize.define('Movimiento', {
 }, {
   tableName:  'movimientos',
   timestamps: true,
+  paranoid:   true,   // F1.2 — soft delete
 })
+
+applyFieldEncryption(Movimiento, ['descripcion'])
 
 export default Movimiento

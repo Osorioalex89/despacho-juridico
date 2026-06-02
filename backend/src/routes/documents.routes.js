@@ -1,18 +1,21 @@
 import { Router }                   from 'express'
 import { verifyToken, requireRole } from '../middlewares/auth.middleware.js'
+import { requireOwnership }         from '../middlewares/ownership.middleware.js'
 import { upload }                   from '../config/multer.js'
+import { docAiLimiter }             from '../middlewares/aiRateLimit.middleware.js'
 import {
   getDocumentos, uploadDocumento,
   deleteDocumento, descargarDocumento, reanalizar, toggleBloqueo
 } from '../controllers/documents.controller.js'
 import Document   from '../models/Document.js'
-import cloudinary from '../config/cloudinary.js'
+import { fetchDocumentBuffer } from '../services/cloudinary.service.js'
+import { logAction, ACTIONS } from '../services/auditLogger.js'
 const router = Router()
 router.use(verifyToken)
 
 router.get('/',                requireRole('abogado', 'secretario'), getDocumentos)
-router.post('/',   upload.single('archivo'), requireRole('abogado', 'secretario'), uploadDocumento)
-router.post('/:id/analizar',      requireRole('abogado', 'secretario'), reanalizar)
+router.post('/',   docAiLimiter, upload.single('archivo'), requireRole('abogado', 'secretario'), uploadDocumento)
+router.post('/:id/analizar',      docAiLimiter, requireRole('abogado', 'secretario'), reanalizar)
 router.get('/:id/descargar',      requireRole('abogado', 'secretario'), descargarDocumento)
 router.patch('/:id/toggle-bloqueo', requireRole('abogado', 'secretario'), toggleBloqueo)
 router.delete('/:id',             requireRole('abogado'),               deleteDocumento)
@@ -55,7 +58,7 @@ router.get('/mis-documentos', requireRole('cliente'), async (req, res) => {
 })
 
 // Cliente descarga su propio documento
-router.get('/mis-documentos/:id/descargar', requireRole('cliente'), async (req, res) => {
+router.get('/mis-documentos/:id/descargar', requireRole('cliente'), requireOwnership('document'), async (req, res) => {
   try {
     const doc = await Document.findByPk(req.params.id)
     if (!doc || doc.categoria === 'confidencial') {
@@ -64,14 +67,15 @@ router.get('/mis-documentos/:id/descargar', requireRole('cliente'), async (req, 
     if (doc.bloqueado) {
       return res.status(403).json({ message: 'Este documento aún no está disponible para descarga' })
     }
-    const url      = cloudinary.url(doc.nombre, { resource_type: 'raw', secure: true })
-    const response = await fetch(url)
-    if (!response.ok) {
-      return res.status(404).json({ message: 'Archivo no encontrado' })
+    let buffer
+    try {
+      buffer = await fetchDocumentBuffer(doc.nombre)
+    } catch (e) {
+      return res.status(e.statusCode || 404).json({ message: 'Archivo no encontrado' })
     }
-    const buffer = Buffer.from(await response.arrayBuffer())
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(doc.nombre_original)}"`)
     res.setHeader('Content-Type', doc.tipo || 'application/octet-stream')
+    logAction(req, ACTIONS.DOC_DOWNLOAD, { resourceType: 'documento', resourceId: doc.id_documento, metadata: { id_caso: doc.id_caso, canal: 'cliente' } })
     res.end(buffer)
   } catch (error) {
     res.status(500).json({ message: 'Error interno del servidor' })
@@ -79,7 +83,7 @@ router.get('/mis-documentos/:id/descargar', requireRole('cliente'), async (req, 
 })
 
 // Cliente hace preview de su propio documento (inline en el navegador)
-router.get('/mis-documentos/:id/preview', requireRole('cliente'), async (req, res) => {
+router.get('/mis-documentos/:id/preview', requireRole('cliente'), requireOwnership('document'), async (req, res) => {
   try {
     const doc = await Document.findByPk(req.params.id)
     if (!doc) {
@@ -91,14 +95,15 @@ router.get('/mis-documentos/:id/preview', requireRole('cliente'), async (req, re
     if (doc.bloqueado) {
       return res.status(403).json({ bloqueado: true, message: 'Documento pendiente de revisión por el abogado' })
     }
-    const url      = cloudinary.url(doc.nombre, { resource_type: 'raw', secure: true })
-    const response = await fetch(url)
-    if (!response.ok) {
-      return res.status(404).json({ message: 'Archivo no encontrado' })
+    let buffer
+    try {
+      buffer = await fetchDocumentBuffer(doc.nombre)
+    } catch (e) {
+      return res.status(e.statusCode || 404).json({ message: 'Archivo no encontrado' })
     }
-    const buffer = Buffer.from(await response.arrayBuffer())
     res.setHeader('Content-Type', doc.tipo)
     res.setHeader('Content-Disposition', `inline; filename="${doc.nombre_original}"`)
+    logAction(req, ACTIONS.DOC_PREVIEW, { resourceType: 'documento', resourceId: doc.id_documento, metadata: { id_caso: doc.id_caso, canal: 'cliente' } })
     res.end(buffer)
   } catch (error) {
     console.error('Error en preview de documento:', error.message)

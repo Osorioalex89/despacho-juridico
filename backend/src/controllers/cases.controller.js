@@ -7,7 +7,8 @@ import User        from '../models/User.js'
 import Movimiento  from '../models/Movimiento.js'
 import ChatMensaje from '../models/ChatMensaje.js'
 import { notifyNewCaseComment, notifyMovimientoProcesal, notifyNuevoCasoAsignado } from '../services/emailService.js'
-import { notifyUsers, notifyAdmins } from '../services/notificationService.js'
+import { notifyUsers, notifyClientes, notifyAdmins } from '../services/notificationService.js'
+import { logAction, ACTIONS } from '../services/auditLogger.js'
 
 // GET /api/casos
 export const getCasos = async (req, res) => {
@@ -111,7 +112,7 @@ export const createCaso = async (req, res) => {
 
     // SSE: notificar al cliente en tiempo real
     if (caso.id_cliente) {
-      notifyUsers([caso.id_cliente], {
+      notifyClientes([caso.id_cliente], {
         tipo:   'caso:asignado',
         titulo: 'Nuevo caso asignado',
         mensaje: `Folio ${caso.folio} — ${caso.asunto}`,
@@ -204,18 +205,17 @@ export const addComentario = async (req, res) => {
     res.status(201).json({ message: 'Comentario agregado', comentario })
 
     // SSE: notificar en tiempo real
-    const receptoresSSE = []
-    if (caso.id_cliente) receptoresSSE.push(caso.id_cliente)
-    if (caso.id_abogado && caso.id_abogado !== req.user.id) receptoresSSE.push(caso.id_abogado)
-    if (receptoresSSE.length > 0) {
-      notifyUsers(receptoresSSE, {
-        tipo:   'comentario:nuevo',
-        titulo: 'Nuevo comentario en caso',
-        mensaje: `${caso.folio} — ${contenido.trim().substring(0, 80)}`,
-        link:   `/panel/casos/${caso.id_caso}`,
-        icono:  'MessageSquare',
-        color:  '#C4B5FD',
-      })
+    const eventoComentario = {
+      tipo:   'comentario:nuevo',
+      titulo: 'Nuevo comentario en caso',
+      mensaje: `${caso.folio} — ${contenido.trim().substring(0, 80)}`,
+      link:   `/panel/casos/${caso.id_caso}`,
+      icono:  'MessageSquare',
+      color:  '#C4B5FD',
+    }
+    if (caso.id_cliente) notifyClientes([caso.id_cliente], eventoComentario)
+    if (caso.id_abogado && caso.id_abogado !== req.user.id) {
+      notifyUsers([caso.id_abogado], eventoComentario)
     }
 
     // Notificar a cliente y (si corresponde) al abogado — fire-and-forget
@@ -335,14 +335,32 @@ export const getCasoTimeline = async (req, res) => {
   }
 }
 
-// DELETE /api/casos/:id
+// DELETE /api/casos/:id — soft delete (paranoid:true marca deletedAt)
 export const deleteCaso = async (req, res) => {
   try {
     const caso = await Case.findByPk(req.params.id)
     if (!caso) return res.status(404).json({ message: 'Caso no encontrado' })
     await caso.destroy()
+    logAction(req, ACTIONS.DELETE_CASO, { resourceType: 'caso', resourceId: caso.id_caso, metadata: { folio: caso.folio } })
     res.json({ message: 'Caso eliminado exitosamente' })
   } catch (error) {
+    res.status(500).json({ message: 'Error interno del servidor' })
+  }
+}
+
+// POST /api/casos/:id/restaurar — abogado restaura caso soft-deleted (F1.2)
+export const restaurarCaso = async (req, res) => {
+  try {
+    const caso = await Case.findByPk(req.params.id, { paranoid: false })
+    if (!caso) return res.status(404).json({ message: 'Caso no encontrado' })
+    if (!caso.deletedAt) {
+      return res.status(400).json({ message: 'El caso no está eliminado' })
+    }
+    await caso.restore()
+    logAction(req, ACTIONS.RESTORE_CASO, { resourceType: 'caso', resourceId: caso.id_caso, metadata: { folio: caso.folio } })
+    res.json({ message: 'Caso restaurado exitosamente', caso })
+  } catch (error) {
+    console.error('Error al restaurar caso:', error.message)
     res.status(500).json({ message: 'Error interno del servidor' })
   }
 }
@@ -352,14 +370,6 @@ export const getMovimientos = async (req, res) => {
   try {
     const caso = await Case.findByPk(req.params.id)
     if (!caso) return res.status(404).json({ message: 'Caso no encontrado' })
-
-    // Si es cliente, verificar que el caso le pertenece
-    if (req.user.rol === 'cliente') {
-      const cliente = await Client.findOne({ where: { id_usuario: req.user.id } })
-      if (!cliente || caso.id_cliente !== cliente.id_cliente) {
-        return res.status(403).json({ message: 'Acceso denegado' })
-      }
-    }
 
     const movimientos = await Movimiento.findAll({
       where: { id_caso: req.params.id },
@@ -416,7 +426,7 @@ export const addMovimiento = async (req, res) => {
 
     // SSE: notificar al cliente en tiempo real
     if (caso.id_cliente) {
-      notifyUsers([caso.id_cliente], {
+      notifyClientes([caso.id_cliente], {
         tipo:   'movimiento:registrado',
         titulo: 'Nuevo movimiento procesal',
         mensaje: `${caso.folio} — ${descripcion.trim().substring(0, 80)}`,
@@ -438,14 +448,6 @@ export const getChatHistory = async (req, res) => {
 
     const caso = await Case.findByPk(id)
     if (!caso) return res.status(404).json({ message: 'Caso no encontrado' })
-
-    // Verificar acceso cliente
-    if (req.user.rol === 'cliente') {
-      const cliente = await Client.findOne({ where: { id_usuario: req.user.id } })
-      if (!cliente || caso.id_cliente !== cliente.id_cliente) {
-        return res.status(403).json({ message: 'Sin acceso a este caso' })
-      }
-    }
 
     const mensajes = await ChatMensaje.findAll({
       where:  { id_caso: id, id_usuario: req.user.id },
@@ -473,14 +475,6 @@ export const chatCaso = async (req, res) => {
     const caso = await Case.findByPk(id)
     if (!caso)  return res.status(404).json({ message: 'Caso no encontrado' })
 
-    // Verificar acceso cliente
-    if (req.user.rol === 'cliente') {
-      const cliente = await Client.findOne({ where: { id_usuario: req.user.id } })
-      if (!cliente || caso.id_cliente !== cliente.id_cliente) {
-        return res.status(403).json({ message: 'Sin acceso a este caso' })
-      }
-    }
-
     const Document = (await import('../models/Document.js')).default
     const [movimientos, documentos, casosReferencia, userRecord] = await Promise.all([
       Movimiento.findAll({ where: { id_caso: id }, order: [['fecha_movimiento','DESC']], limit: 10 }),
@@ -501,7 +495,7 @@ export const chatCaso = async (req, res) => {
     const historialReciente = historial.slice(-10)
 
     const { chatConCaso } = await import('../services/aiService.js')
-    const respuesta = await chatConCaso({ caso, movimientos, documentos, historial: historialReciente, pregunta: pregunta.trim(), casosReferencia, userName })
+    const respuesta = await chatConCaso({ caso, movimientos, documentos, historial: historialReciente, pregunta: pregunta.trim(), casosReferencia, userName, uid: `user:${req.user?.id || 'anon'}` })
 
     // Persistir user + assistant en BD (fire-and-forget, no bloquea la respuesta)
     ChatMensaje.bulkCreate([

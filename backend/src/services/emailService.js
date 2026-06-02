@@ -1181,3 +1181,25 @@ export const notifyDocumentoAdjunto = async ({
     html: emailBase('Nuevo documento en tu expediente', contenido, { showSecurityNote: false }),
   }).catch(err => console.error(`Error notificando documento a ${toCliente}:`, err.message))
 }
+
+// F5.3 — Alerta de seguridad al admin (auditoría).
+//   tipo: 'otp_brute_force' | 'doc_exfiltration_suspect' | 'new_ip_login'
+//   detalle: { titulo, lineas: string[] }
+export const notifyAuditAlert = async ({ to, tipo, titulo, lineas = [] }) => {
+  const list = lineas.map(l => `<li style="margin:6px 0;color:rgba(255,255,255,0.85);">${l}</li>`).join('')
+  const contenido = `
+    <h2 class="greeting">⚠ Alerta de seguridad</h2>
+    <p class="intro">Se detectó un patrón anómalo que requiere tu revisión.</p>
+    <div class="otp-box" style="text-align:left;">
+      <p class="otp-label">${tipo}</p>
+      <p style="font-size:15px;font-weight:600;color:rgba(255,255,255,0.95);margin:0 0 10px;">${titulo}</p>
+      <ul style="margin:0;padding-left:18px;font-size:13px;font-family:'Inter',sans-serif;">${list}</ul>
+    </div>
+    <p style="font-size:12px;color:rgba(255,255,255,0.4);">Revisa el registro completo en /panel/auditoria.</p>
+  `
+  await transporter.sendMail({
+    to,
+    subject: `[Seguridad] ${titulo}`,
+    html: emailBase('Alerta de seguridad', contenido, { showSecurityNote: false }),
+  }).catch(err => console.error(`[Audit] Error enviando alerta a ${to}:`, err.message))
+}

@@ -1,5 +1,6 @@
-import { DataTypes } from 'sequelize'
-import sequelize     from '../config/database.js'
+import { DataTypes }          from 'sequelize'
+import sequelize              from '../config/database.js'
+import { applyFieldEncryption } from './encryptedFields.js'
 
 const ChatMensaje = sequelize.define('ChatMensaje', {
   id_mensaje: {
@@ -28,5 +29,8 @@ const ChatMensaje = sequelize.define('ChatMensaje', {
   timestamps: true,
   updatedAt:  false,
 })
+
+// content se guarda vía bulkCreate → beforeBulkCreate es imprescindible.
+applyFieldEncryption(ChatMensaje, ['content'])
 
 export default ChatMensaje

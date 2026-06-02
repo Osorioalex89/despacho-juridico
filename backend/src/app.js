@@ -16,6 +16,8 @@ import documentRoutes    from './routes/documents.routes.js'
 import statsRoutes       from './routes/stats.routes.js'
 import landingRoutes        from './routes/landing.routes.js'
 import notificationRoutes  from './routes/notifications.routes.js'
+import auditRoutes         from './routes/audit.routes.js'
+import arcoRoutes          from './routes/arco.routes.js'
 import { startReminderWorker } from './workers/reminderWorker.js'
 
 dotenv.config()
@@ -49,6 +51,8 @@ app.use('/api/documentos', documentRoutes)
 app.use('/api/stats',      statsRoutes)
 app.use('/api/landing',        landingRoutes)
 app.use('/api/notificaciones', notificationRoutes)
+app.use('/api/audit',          auditRoutes)
+app.use('/api/yo',             arcoRoutes)
 
 // NOTA: /uploads NO se sirve como estático para forzar auth en cada descarga.
 // Toda descarga pasa por /api/documentos/:id/descargar o /api/documentos/mis-documentos/:id/descargar
@@ -88,6 +92,26 @@ async function runMigrations() {
     "ALTER TABLE citas ADD COLUMN id_solicitante INT NULL",
     "ALTER TABLE usuarios ADD COLUMN reset_token VARCHAR(64) NULL",
     "ALTER TABLE usuarios ADD COLUMN reset_token_expires DATETIME NULL",
+    // F1.1/F1.3 — cifrado at-rest: encrypted_version para backfill reanudable (F0.2)
+    "ALTER TABLE casos        ADD COLUMN encrypted_version INT NULL",
+    "ALTER TABLE comentarios  ADD COLUMN encrypted_version INT NULL",
+    "ALTER TABLE documentos   ADD COLUMN encrypted_version INT NULL",
+    "ALTER TABLE movimientos  ADD COLUMN encrypted_version INT NULL",
+    // descripcion cifrada supera VARCHAR(255) → ampliar a TEXT (idempotente)
+    "ALTER TABLE documentos MODIFY COLUMN descripcion TEXT NULL",
+    // F6.1 — consentimiento LFPDPPP
+    "ALTER TABLE usuarios ADD COLUMN aviso_aceptado_at DATETIME NULL",
+    "ALTER TABLE usuarios ADD COLUMN aviso_version VARCHAR(10) NULL",
+    // F6.2 — ARCO (solicitud + anonimización)
+    "ALTER TABLE usuarios ADD COLUMN cancelacion_solicitada_at DATETIME NULL",
+    "ALTER TABLE usuarios ADD COLUMN anonimizado_at DATETIME NULL",
+    // F1.2 — soft delete: columna deletedAt para Sequelize paranoid:true
+    "ALTER TABLE casos        ADD COLUMN deletedAt DATETIME NULL",
+    "ALTER TABLE clientes     ADD COLUMN deletedAt DATETIME NULL",
+    "ALTER TABLE documentos   ADD COLUMN deletedAt DATETIME NULL",
+    "ALTER TABLE comentarios  ADD COLUMN deletedAt DATETIME NULL",
+    "ALTER TABLE movimientos  ADD COLUMN deletedAt DATETIME NULL",
+    "ALTER TABLE citas        ADD COLUMN deletedAt DATETIME NULL",
   ]
   for (const q of migrations) {
     try {
@@ -98,6 +122,24 @@ async function runMigrations() {
     }
   }
 
+  // F5.1 — Tabla audit_log (registro inmutable de eventos de seguridad)
+  await sequelize.query(`
+    CREATE TABLE IF NOT EXISTS audit_log (
+      id            BIGINT       NOT NULL AUTO_INCREMENT,
+      user_id       INT          NULL,
+      ip            VARCHAR(45)  NULL,
+      action        VARCHAR(50)  NOT NULL,
+      resource_type VARCHAR(30)  NULL,
+      resource_id   INT          NULL,
+      metadata_json JSON         NULL,
+      created_at    DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (id),
+      INDEX idx_audit_user_action (user_id, action),
+      INDEX idx_audit_created (created_at),
+      INDEX idx_audit_action (action)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `)
+
   // Tabla historial chat IA (idempotente)
   await sequelize.query(`
     CREATE TABLE IF NOT EXISTS chat_mensajes (
@@ -106,12 +148,20 @@ async function runMigrations() {
       id_usuario   INT           NULL,
       role         ENUM('user','assistant') NOT NULL,
       content      TEXT          NOT NULL,
+      encrypted_version INT      NULL,
       createdAt    DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
       PRIMARY KEY (id_mensaje),
       INDEX idx_chat_caso (id_caso),
       INDEX idx_chat_usuario (id_usuario)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `)
+
+  // F1.1/F1.3 — encrypted_version en chat_mensajes existentes (idempotente)
+  try {
+    await sequelize.query(`ALTER TABLE chat_mensajes ADD COLUMN encrypted_version INT NULL`)
+  } catch (err) {
+    if (err.original?.errno !== 1060) throw err
+  }
 
   // Agregar id_usuario a chat_mensajes si no existe (tablas ya creadas)
   try {

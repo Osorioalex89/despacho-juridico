@@ -9,6 +9,7 @@ import {
   sendResetLinkToClient,
   notifyAdminNewUser,
 } from '../services/emailService.js'
+import { logAction, ACTIONS } from '../services/auditLogger.js'
 
 // ── Helpers ───────────────────────────────────────────────────────
 const generateOtp     = () => String(Math.floor(100000 + Math.random() * 900000))
@@ -17,13 +18,25 @@ const generateToken64 = () => crypto.randomBytes(32).toString('hex')
 // URL base para links de verificación (configurable en .env)
 const BASE_URL = process.env.APP_URL || 'http://localhost:5173'
 
+// F6.1 — Versión del aviso de privacidad vigente.
+// Cuando se publique una nueva versión: bumpear aquí y obligar re-aceptación.
+const AVISO_PRIVACIDAD_VERSION = process.env.AVISO_PRIVACIDAD_VERSION || '1.0'
+
 // ── POST /api/auth/registro ───────────────────────────────────────
 export const registro = async (req, res) => {
   try {
-    const { nombre, correo, contrasena, turnstileToken, origen } = req.body
+    const { nombre, correo, contrasena, turnstileToken, origen, avisoAceptado } = req.body
 
     if (!nombre || !correo || !contrasena) {
       return res.status(400).json({ message: 'Todos los campos son requeridos' })
+    }
+
+    // F6.1 — LFPDPPP: consentimiento expreso obligatorio
+    if (!avisoAceptado) {
+      return res.status(400).json({
+        message: 'Debes aceptar el Aviso de Privacidad para crear una cuenta.',
+        code:    'AVISO_REQUERIDO',
+      })
     }
 
     // ── Verificar Cloudflare Turnstile ─────────────────────────
@@ -62,6 +75,8 @@ export const registro = async (req, res) => {
       activo:     false,
       verification_token,
       origen:     origen || null,
+      aviso_aceptado_at: new Date(),
+      aviso_version:     AVISO_PRIVACIDAD_VERSION,
     })
 
     // ── Enviar correo de verificación ──────────────────────────
@@ -130,11 +145,13 @@ export const login = async (req, res) => {
 
     const user = await User.findOne({ where: { correo } })
     if (!user) {
+      logAction(req, ACTIONS.LOGIN_FAILED, { metadata: { correo, motivo: 'user_no_existe' } })
       return res.status(401).json({ message: 'Credenciales incorrectas' })
     }
 
     const passwordOk = await bcrypt.compare(contrasena, user.contrasena)
     if (!passwordOk) {
+      logAction(req, ACTIONS.LOGIN_FAILED, { userId: user.id_usuario, metadata: { correo, motivo: 'password_invalido' } })
       return res.status(401).json({ message: 'Credenciales incorrectas' })
     }
 
@@ -152,12 +169,18 @@ export const login = async (req, res) => {
 
     await user.update({ otp_code: otp, otp_expires, otp_intentos: 0 })
 
+    if (process.env.NODE_ENV !== 'production') {
+      console.log(`\n🔑 [DEV] OTP para ${user.correo}: ${otp}\n`)
+    }
+
     // ── Enviar OTP al correo del usuario ───────────────────────
     try {
       await sendOtpEmail({ to: user.correo, nombre: user.nombre, otp })
     } catch (mailErr) {
       console.error('Error enviando OTP:', mailErr.message)
-      return res.status(500).json({ message: 'Error enviando el código de verificación. Intenta más tarde.' })
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(500).json({ message: 'Error enviando el código de verificación. Intenta más tarde.' })
+      }
     }
 
     // ── tempToken: JWT corto (10 min) para identificar la sesión OTP
@@ -228,6 +251,7 @@ export const verifyOtp = async (req, res) => {
       }
 
       await user.update({ otp_intentos: intentos })
+      logAction(req, ACTIONS.OTP_FAILED, { userId: user.id_usuario, metadata: { intentos, restantes } })
       return res.status(401).json({
         message: `Código incorrecto. Te quedan ${restantes} intento${restantes === 1 ? '' : 's'}.`,
       })
@@ -235,6 +259,7 @@ export const verifyOtp = async (req, res) => {
 
     // ── OTP válido → limpiar OTP y emitir JWT final ────────────
     await user.update({ otp_code: null, otp_expires: null })
+    logAction(req, ACTIONS.LOGIN, { userId: user.id_usuario, metadata: { correo: user.correo, rol: user.rol } })
 
     const token = jwt.sign(
       {
@@ -306,6 +331,7 @@ export const solicitarReset = async (req, res) => {
       }
     }
 
+    logAction(req, ACTIONS.RESET_REQUEST, { userId: user.id_usuario, metadata: { correo: user.correo } })
     res.json({ message: 'Si el correo está registrado recibirás una respuesta del despacho.' })
 
   } catch (error) {
@@ -348,6 +374,7 @@ export const adminResetPassword = async (req, res) => {
       resetUrl,
     }).catch(err => console.error('Error enviando link de reset al cliente:', err.message))
 
+    logAction(req, ACTIONS.RESET_ISSUED, { resourceType: 'usuario', resourceId: user.id_usuario, metadata: { correo: user.correo } })
     res.json({ message: `Enlace de restablecimiento enviado a ${user.correo}. Válido por 2 horas.` })
 
   } catch (error) {
@@ -388,6 +415,7 @@ export const resetPassword = async (req, res) => {
       reset_token_expires: null,
     })
 
+    logAction(req, ACTIONS.RESET_CONSUMED, { userId: user.id_usuario, metadata: { correo: user.correo } })
     res.json({ message: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.' })
 
   } catch (error) {

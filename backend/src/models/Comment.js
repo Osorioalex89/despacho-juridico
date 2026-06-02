@@ -1,5 +1,6 @@
-import { DataTypes } from 'sequelize'
-import sequelize     from '../config/database.js'
+import { DataTypes }          from 'sequelize'
+import sequelize              from '../config/database.js'
+import { applyFieldEncryption } from './encryptedFields.js'
 
 const Comment = sequelize.define('Comentario', {
   id_comentario: {
@@ -22,6 +23,9 @@ const Comment = sequelize.define('Comentario', {
 }, {
   tableName:  'comentarios',
   timestamps: true,
+  paranoid:   true,   // F1.2 — soft delete
 })
+
+applyFieldEncryption(Comment, ['contenido'])
 
 export default Comment

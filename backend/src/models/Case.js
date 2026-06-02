@@ -1,5 +1,6 @@
-import { DataTypes } from 'sequelize'
-import sequelize     from '../config/database.js'
+import { DataTypes }          from 'sequelize'
+import sequelize              from '../config/database.js'
+import { applyFieldEncryption } from './encryptedFields.js'
 
 const Case = sequelize.define('Caso', {
   id_caso: {
@@ -81,6 +82,10 @@ const Case = sequelize.define('Caso', {
 }, {
   tableName:  'casos',
   timestamps: true,
+  paranoid:   true,   // F1.2 — soft delete: destroy() marca deletedAt en vez de borrar
 })
+
+// asunto/folio/estado NO se cifran: se usan en búsqueda LIKE (cases.controller).
+applyFieldEncryption(Case, ['reporte_ia'])
 
 export default Case

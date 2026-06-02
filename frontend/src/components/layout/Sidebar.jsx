@@ -24,6 +24,7 @@ const NAV_ITEMS = [
   { label: 'Documentos',  path: '/panel/documentos',         icon: FileText,        roles: ['abogado', 'secretario'] },
   { label: 'Solicitudes', path: '/panel/usuarios-pendientes',icon: UserCheck,       roles: ['abogado', 'secretario'] },
   { label: 'Landing',     path: '/panel/solicitudes-landing', icon: Globe,           roles: ['abogado', 'secretario'] },
+  { label: 'Auditoría',   path: '/panel/auditoria',          icon: Shield,          roles: ['abogado'] },
 ]
 
 const ROL_LABEL = {

@@ -19,10 +19,18 @@ const asesoriaLimiter = rateLimit({
  */
 router.post('/asesoria', asesoriaLimiter, async (req, res) => {
   try {
-    const { nombre, correo, telefono, mensaje } = req.body
+    const { nombre, correo, telefono, mensaje, avisoAceptado } = req.body
 
     if (!nombre || !correo || !mensaje) {
       return res.status(400).json({ message: 'Nombre, correo y mensaje son requeridos.' })
+    }
+
+    // F6.1 — LFPDPPP: el formulario público también requiere aceptación expresa.
+    if (!avisoAceptado) {
+      return res.status(400).json({
+        message: 'Debes aceptar el Aviso de Privacidad para enviar tu solicitud.',
+        code:    'AVISO_REQUERIDO',
+      })
     }
 
     const Client      = (await import('../models/Client.js')).default

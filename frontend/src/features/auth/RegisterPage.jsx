@@ -20,6 +20,7 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false)
   const [exito,   setExito]   = useState(false)
   const [showPass,setShowPass]= useState(false)
+  const [avisoAceptado, setAvisoAceptado] = useState(false)
   const turnstileRef          = useRef(null)
   const turnstileToken        = useRef('')
 
@@ -56,6 +57,7 @@ export default function RegisterPage() {
     if (!form.correo.trim())        return 'El correo es requerido'
     if (form.contrasena.length < 6) return 'La contraseña debe tener al menos 6 caracteres'
     if (form.contrasena !== form.confirmar) return 'Las contraseñas no coinciden'
+    if (!avisoAceptado)                     return 'Debes aceptar el Aviso de Privacidad'
     return null
   }
 
@@ -70,6 +72,7 @@ export default function RegisterPage() {
         correo:         form.correo,
         contrasena:     form.contrasena,
         turnstileToken: turnstileToken.current || undefined,
+        avisoAceptado:  true,
         ...(origen && { origen }),
       })
       setExito(true)
@@ -319,6 +322,31 @@ export default function RegisterPage() {
                 {' '}El despacho te dará acceso una vez que verifique tu solicitud.
               </p>
             </div>
+
+            {/* F6.1 — Consentimiento LFPDPPP */}
+            <label style={{
+              display:'flex', alignItems:'flex-start', gap:'10px',
+              padding:'10px 12px', marginBottom:'12px',
+              background:'rgba(255,255,255,0.04)',
+              border:`1px solid ${avisoAceptado ? 'rgba(134,239,172,0.35)' : 'rgba(255,255,255,0.12)'}`,
+              borderRadius:'10px', cursor:'pointer',
+              transition:'all 0.18s ease',
+            }}>
+              <input
+                type="checkbox"
+                checked={avisoAceptado}
+                onChange={(e) => { setAvisoAceptado(e.target.checked); setError('') }}
+                style={{ marginTop:'2px', accentColor:'#C9A84C', cursor:'pointer', flexShrink:0 }}
+                required
+              />
+              <span style={{ fontFamily:"'Inter',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.7)', lineHeight:1.55 }}>
+                Acepto el{' '}
+                <a href="/aviso-privacidad" target="_blank" rel="noopener noreferrer"
+                   style={{ color:'#E8C97A', fontWeight:600, textDecoration:'none', borderBottom:'1px solid rgba(232,201,122,0.4)' }}>
+                  Aviso de Privacidad
+                </a>{' '}y el tratamiento de mis datos personales conforme a la <b>LFPDPPP</b>.
+              </span>
+            </label>
 
             {/* Cloudflare Turnstile */}
             <div style={{ marginBottom:'12px', display:'flex', justifyContent:'center' }}>

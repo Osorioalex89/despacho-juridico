@@ -38,6 +38,7 @@ const Client = sequelize.define('Cliente', {
 }, {
   tableName:  'clientes',
   timestamps: true,
+  paranoid:   true,   // F1.2 — soft delete
 })
 
 export default Client

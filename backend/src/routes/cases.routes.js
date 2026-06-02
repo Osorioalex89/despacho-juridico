@@ -1,8 +1,10 @@
 import { Router }                   from 'express'
 import { verifyToken, requireRole } from '../middlewares/auth.middleware.js'
+import { requireOwnership }         from '../middlewares/ownership.middleware.js'
+import { chatIaLimiter }            from '../middlewares/aiRateLimit.middleware.js'
 import {
   getCasos, getCasoById,
-  createCaso, updateCaso, deleteCaso,
+  createCaso, updateCaso, deleteCaso, restaurarCaso,
   addComentario, getCasoTimeline,
   getMovimientos, addMovimiento,
   chatCaso, getChatHistory,
@@ -36,15 +38,16 @@ router.get('/mis-casos', requireRole('cliente'), async (req, res) => {
 })
 
 router.get('/:id/timeline',      requireRole('abogado', 'secretario'),           getCasoTimeline)
-router.get('/:id/movimientos',   requireRole('abogado', 'secretario', 'cliente'), getMovimientos)
+router.get('/:id/movimientos',   requireRole('abogado', 'secretario', 'cliente'), requireOwnership('case'), getMovimientos)
 router.post('/:id/movimientos',  requireRole('abogado', 'secretario'),            addMovimiento)
 router.get('/:id',               requireRole('abogado', 'secretario'),            getCasoById)
 router.post('/',                 requireRole('abogado'),                createCaso)
 router.put('/:id',               requireRole('abogado'),                updateCaso)
 router.delete('/:id',            requireRole('abogado'),                deleteCaso)
+router.post('/:id/restaurar',    requireRole('abogado'),                restaurarCaso)
 // Comentarios — disponible para abogado y secretario
 router.post('/:id/comentarios',  requireRole('abogado', 'secretario'),  addComentario)
-router.get( '/:id/chat-history', requireRole('abogado', 'secretario', 'cliente'), getChatHistory)
-router.post('/:id/chat',         requireRole('abogado', 'secretario', 'cliente'), chatCaso)
+router.get( '/:id/chat-history', requireRole('abogado', 'secretario', 'cliente'), requireOwnership('case'), getChatHistory)
+router.post('/:id/chat',         chatIaLimiter, requireRole('abogado', 'secretario', 'cliente'), requireOwnership('case'), chatCaso)
 
 export default router

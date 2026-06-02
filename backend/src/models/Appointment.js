@@ -52,6 +52,7 @@ id_solicitante: {
 }, {
   tableName:  'citas',
   timestamps: true,
+  paranoid:   true,   // F1.2 — soft delete
 })
 
 Appointment.belongsTo(Client, { foreignKey: 'id_cliente', as: 'Cliente' })

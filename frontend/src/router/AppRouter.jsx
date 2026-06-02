@@ -23,6 +23,8 @@ import MisCasosPage from '../features/clientportal/MisCasosPage'
 import DocumentosPage from '../features/documents/DocumentosPage'
 import ClientDetail from '../features/clients/ClientDetail'
 import SolicitudesLandingPage from '../features/landing/SolicitudesLandingPage'
+import AvisoPrivacidadPage from '../features/auth/AvisoPrivacidadPage'
+import AuditoriaPage from '../features/audit/AuditoriaPage'
 
 
 
@@ -84,6 +86,7 @@ export default function AppRouter() {
         <Route path="/verificar-email"     element={<VerificarEmailPage />} />
         <Route path="/olvide-contrasena"   element={<OlvideContrasenaPage />} />
         <Route path="/reset-password"      element={<ResetPasswordPage />} />
+        <Route path="/aviso-privacidad"    element={<AvisoPrivacidadPage />} />
 
         {/* ── Usuario pendiente de aprobación ── */}
         <Route path="/pendiente" element={
@@ -163,6 +166,11 @@ export default function AppRouter() {
         <Route path="/panel/solicitudes-landing" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
             <PanelLayout><SolicitudesLandingPage /></PanelLayout>
+          </ProtectedRoute>
+        } />
+        <Route path="/panel/auditoria" element={
+          <ProtectedRoute requiredRoles={['abogado']}>
+            <PanelLayout><AuditoriaPage /></PanelLayout>
           </ProtectedRoute>
         } />
 

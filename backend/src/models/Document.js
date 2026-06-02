@@ -1,5 +1,6 @@
-import { DataTypes } from 'sequelize'
-import sequelize     from '../config/database.js'
+import { DataTypes }          from 'sequelize'
+import sequelize              from '../config/database.js'
+import { applyFieldEncryption } from './encryptedFields.js'
 
 const Document = sequelize.define('Documento', {
   id_documento: {
@@ -23,12 +24,15 @@ const Document = sequelize.define('Documento', {
     type:         DataTypes.ENUM('general', 'confidencial'),
     defaultValue: 'general',
   },
-  descripcion:   { type: DataTypes.STRING(255), allowNull: true },
+  descripcion:   { type: DataTypes.TEXT,        allowNull: true }, // TEXT: cifrado supera 255 chars
   analisis:      { type: DataTypes.TEXT,        allowNull: true },
   bloqueado:     { type: DataTypes.BOOLEAN,     defaultValue: true },
 }, {
   tableName:  'documentos',
   timestamps: true,
+  paranoid:   true,   // F1.2 — soft delete
 })
+
+applyFieldEncryption(Document, ['analisis', 'descripcion'])
 
 export default Document

@@ -2,6 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { Calendar, FolderOpen, LogOut, Menu, X } from 'lucide-react'
 import { useState } from 'react'
+import NotificationBell from '../notifications/NotificationBell'
 
 // ── Logo SVG premium — mismo que Sidebar ─────────────────────────
 const LogoMark = () => (
@@ -331,6 +332,8 @@ export default function ClientNavbar({ children }) {
 
             {/* Right: usuario + logout */}
             <div className="cn-right">
+              <NotificationBell placement="dropdown" />
+
               <div className="cn-user">
                 <div className="cn-avatar" translate="no">
                   {user?.nombre?.charAt(0).toUpperCase()}

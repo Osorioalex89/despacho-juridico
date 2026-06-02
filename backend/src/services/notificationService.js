@@ -20,6 +20,21 @@ export function notifyUsers(userIds, event) {
   }
 }
 
+// Envía a clientes identificados por id_cliente (PK de la tabla clientes).
+// Traduce id_cliente → id_usuario porque las conexiones SSE se indexan por id_usuario.
+export async function notifyClientes(clienteIds, event) {
+  const ids = clienteIds.filter(Boolean)
+  if (ids.length === 0) return
+  const { Op }       = await import('sequelize')
+  const Client       = (await import('../models/Client.js')).default
+  const clientes     = await Client.findAll({
+    where:      { id_cliente: { [Op.in]: ids } },
+    attributes: ['id_usuario'],
+  })
+  const userIds = clientes.map(c => c.id_usuario).filter(Boolean)
+  notifyUsers(userIds, event)
+}
+
 // Envía a todos los abogados y secretarios conectados
 export function notifyAdmins(event) {
   const payload = `data: ${JSON.stringify({ ...event, id: Date.now(), timestamp: new Date().toISOString() })}\n\n`

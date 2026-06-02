@@ -4,7 +4,7 @@ import { Bell } from 'lucide-react'
 import { useNotifications } from '../../context/NotificationsContext'
 import NotificationPanel from './NotificationPanel'
 
-export default function NotificationBell() {
+export default function NotificationBell({ placement = 'sidebar' }) {
   const { unreadCount, markAllRead } = useNotifications()
   const [open, setOpen]           = useState(false)
   const [panelPos, setPanelPos]   = useState({ top: 0, left: 0 })
@@ -25,11 +25,20 @@ export default function NotificationBell() {
   const handleToggle = () => {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect()
-      // Panel aparece a la DERECHA del sidebar, alineado en top con el botón
-      setPanelPos({
-        top:  Math.max(8, rect.top),
-        left: rect.right + 12,
-      })
+      if (placement === 'dropdown') {
+        // Panel debajo del botón, alineado a la derecha (header superior)
+        const PANEL_WIDTH = 340
+        setPanelPos({
+          top:  rect.bottom + 8,
+          left: Math.max(8, rect.right - PANEL_WIDTH),
+        })
+      } else {
+        // Panel a la DERECHA del sidebar, alineado en top con el botón
+        setPanelPos({
+          top:  Math.max(8, rect.top),
+          left: rect.right + 12,
+        })
+      }
       markAllRead()
     }
     setOpen(v => !v)

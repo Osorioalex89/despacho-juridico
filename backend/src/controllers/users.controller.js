@@ -1,5 +1,6 @@
 import User from '../models/User.js'
 import { Op } from 'sequelize'
+import { logAction, ACTIONS } from '../services/auditLogger.js'
 
 // GET /api/usuarios — todos los usuarios
 export const getUsuarios = async (req, res) => {
@@ -38,8 +39,22 @@ export const updateEstadoUsuario = async (req, res) => {
     }
 
     const rolFinal = estado === 'aprobado' ? (rol || 'cliente') : usuario.rol
+    const rolAntes = usuario.rol
+    const estadoAntes = usuario.estado
 
     await usuario.update({ estado, rol: rolFinal })
+
+    if (rolFinal !== rolAntes || estado !== estadoAntes) {
+      logAction(req, ACTIONS.ROLE_CHANGE, {
+        resourceType: 'usuario',
+        resourceId:   usuario.id_usuario,
+        metadata: {
+          correo:       usuario.correo,
+          rolAntes,     rolNuevo:    rolFinal,
+          estadoAntes,  estadoNuevo: estado,
+        },
+      })
+    }
 
     // Si se aprueba como cliente, crear registro en tabla clientes automáticamente
     if (estado === 'aprobado' && rolFinal === 'cliente') {
