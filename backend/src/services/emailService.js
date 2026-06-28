@@ -20,6 +20,38 @@ const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'abogadoadmin89@gmail.com'
 const resendClient = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 const RESEND_FROM = process.env.RESEND_FROM || 'Despacho Sánchez Cerino <onboarding@resend.dev>'
 
+// ── Brevo — envía a CUALQUIER destinatario (API HTTP, puerto 443) ─────
+// A diferencia de Resend en modo test, Brevo entrega a cualquier correo con
+// solo tener un remitente verificado (sin necesidad de dominio propio).
+// Por eso es el proveedor principal para registros/notificaciones a clientes.
+//   BREVO_API_KEY    → clave de API (empieza con "xkeysib-")
+//   BREVO_FROM       → remitente verificado en Brevo (ej. abogadoadmin89@gmail.com)
+//   BREVO_FROM_NAME  → nombre visible (opcional)
+const BREVO_API_KEY   = process.env.BREVO_API_KEY
+const BREVO_FROM      = process.env.BREVO_FROM || FROM_EMAIL
+const BREVO_FROM_NAME = process.env.BREVO_FROM_NAME || 'Despacho Sánchez Cerino'
+
+async function sendViaBrevo({ recipients, subject, html }) {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key': BREVO_API_KEY,
+      'Content-Type': 'application/json',
+      'accept': 'application/json',
+    },
+    body: JSON.stringify({
+      sender: { name: BREVO_FROM_NAME, email: BREVO_FROM },
+      to: recipients.map(email => ({ email })),
+      subject,
+      htmlContent: html,
+    }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`Brevo HTTP ${res.status}: ${body}`)
+  }
+}
+
 // ── Gmail SMTP — solo útil fuera de Railway (SMTP bloqueado allá) ──────
 const gmailUser = process.env.GMAIL_USER
 const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS
@@ -41,6 +73,9 @@ const transporter = {
     const recipients = Array.isArray(to) ? to : [to]
 
     const providers = []
+    if (BREVO_API_KEY) {
+      providers.push(['Brevo', () => sendViaBrevo({ recipients, subject, html })])
+    }
     if (resendClient) {
       providers.push(['Resend', async () => {
         const { error } = await resendClient.emails.send({ from: RESEND_FROM, to: recipients, subject, html })
