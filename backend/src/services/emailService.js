@@ -1,14 +1,44 @@
 // ── Cliente SendGrid ──────────────────────────────────────────────────
 import sgMail from '@sendgrid/mail'
+import nodemailer from 'nodemailer'
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'abogadoadmin89@gmail.com'
+
+// ── Fallback Gmail SMTP (Nodemailer) ──────────────────────────────────
+// Respaldo automático cuando SendGrid falla (p.ej. "Maximum credits
+// exceeded" al agotar la cuota gratuita de 100 correos/día). Solo se
+// activa si están definidas las credenciales:
+//   GMAIL_USER          → la cuenta Gmail (ej. abogadoadmin89@gmail.com)
+//   GMAIL_APP_PASSWORD  → "Contraseña de aplicación" de 16 dígitos (NO la
+//                         contraseña normal; requiere 2FA activo en Gmail)
+const gmailUser = process.env.GMAIL_USER
+const gmailPass = process.env.GMAIL_APP_PASSWORD
+const gmailTransport = (gmailUser && gmailPass)
+  ? nodemailer.createTransport({
+      service: 'gmail',
+      auth: { user: gmailUser, pass: gmailPass },
+    })
+  : null
 
 // Wrapper compatible con todas las llamadas existentes a transporter.sendMail
 const transporter = {
   sendMail: async ({ to, subject, html }) => {
     const recipients = Array.isArray(to) ? to : [to]
-    await sgMail.sendMultiple({ to: recipients, from: FROM_EMAIL, subject, html })
+    try {
+      await sgMail.sendMultiple({ to: recipients, from: FROM_EMAIL, subject, html })
+    } catch (sgErr) {
+      // SendGrid falló: si hay fallback configurado, reintentar por Gmail SMTP.
+      if (!gmailTransport) throw sgErr
+      const motivo = sgErr?.response?.body?.errors?.[0]?.message || sgErr.message
+      console.warn(`SendGrid falló (${motivo}). Usando fallback Gmail SMTP…`)
+      await gmailTransport.sendMail({
+        from: `"Despacho Sánchez Cerino" <${gmailUser}>`,
+        to: recipients.join(','),
+        subject,
+        html,
+      })
+    }
   },
 }
 
