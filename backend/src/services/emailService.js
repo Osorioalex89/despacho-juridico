@@ -1,24 +1,26 @@
-// ── Cliente SendGrid ──────────────────────────────────────────────────
+// ── Proveedores de correo ─────────────────────────────────────────────
 import dns from 'node:dns'
 import sgMail from '@sendgrid/mail'
 import nodemailer from 'nodemailer'
+import { Resend } from 'resend'
 
-// El contenedor de Railway NO enruta IPv6 (connect ENETUNREACH a direcciones
-// 2607:f8b0:...). Forzamos que toda resolución DNS prefiera IPv4 para que el
-// fallback Gmail SMTP (smtp.gmail.com) conecte por A-record y no por AAAA.
+// Railway no enruta IPv6 (ENETUNREACH a 2607:f8b0:...). Preferir IPv4 en DNS.
 dns.setDefaultResultOrder('ipv4first')
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'abogadoadmin89@gmail.com'
 
-// ── Fallback Gmail SMTP (Nodemailer) ──────────────────────────────────
-// Respaldo automático cuando SendGrid falla (p.ej. "Maximum credits
-// exceeded" al agotar la cuota gratuita de 100 correos/día). Solo se
-// activa si están definidas las credenciales:
-//   GMAIL_USER          → la cuenta Gmail (ej. abogadoadmin89@gmail.com)
-//   GMAIL_APP_PASSWORD  → "Contraseña de aplicación" de 16 dígitos (NO la
-//                         contraseña normal; requiere 2FA activo en Gmail)
+// ── Resend — proveedor principal (API HTTP, puerto 443) ───────────────
+// Funciona en Railway porque NO usa SMTP: Railway bloquea los puertos SMTP
+// salientes (465/587), por eso Gmail SMTP daba "Connection timeout".
+// Sin un dominio verificado, Resend solo envía DESDE onboarding@resend.dev
+// y HACIA el correo dueño de la cuenta Resend. Con dominio propio
+// (sanchezcerino.mx) se podrá enviar a cualquier destinatario.
+const resendClient = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
+const RESEND_FROM = process.env.RESEND_FROM || 'Despacho Sánchez Cerino <onboarding@resend.dev>'
+
+// ── Gmail SMTP — solo útil fuera de Railway (SMTP bloqueado allá) ──────
 const gmailUser = process.env.GMAIL_USER
 const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS
 const gmailTransport = (gmailUser && gmailPass)
@@ -27,30 +29,46 @@ const gmailTransport = (gmailUser && gmailPass)
       port: 465,
       secure: true,
       auth: { user: gmailUser, pass: gmailPass },
-      // Forzar IPv4: el contenedor de Railway no tiene ruta IPv6 hacia Gmail
-      // (connect ENETUNREACH a 2607:f8b0:...:465). Sin esto el fallback falla.
       family: 4,
     })
   : null
 
-// Wrapper compatible con todas las llamadas existentes a transporter.sendMail
+// Wrapper con failover automático: intenta cada proveedor en orden y se
+// queda con el primero que funcione. Compatible con todas las llamadas
+// existentes a transporter.sendMail.
 const transporter = {
   sendMail: async ({ to, subject, html }) => {
     const recipients = Array.isArray(to) ? to : [to]
-    try {
-      await sgMail.sendMultiple({ to: recipients, from: FROM_EMAIL, subject, html })
-    } catch (sgErr) {
-      // SendGrid falló: si hay fallback configurado, reintentar por Gmail SMTP.
-      if (!gmailTransport) throw sgErr
-      const motivo = sgErr?.response?.body?.errors?.[0]?.message || sgErr.message
-      console.warn(`SendGrid falló (${motivo}). Usando fallback Gmail SMTP…`)
-      await gmailTransport.sendMail({
+
+    const providers = []
+    if (resendClient) {
+      providers.push(['Resend', async () => {
+        const { error } = await resendClient.emails.send({ from: RESEND_FROM, to: recipients, subject, html })
+        if (error) throw new Error(error.message || JSON.stringify(error))
+      }])
+    }
+    providers.push(['SendGrid', () => sgMail.sendMultiple({ to: recipients, from: FROM_EMAIL, subject, html })])
+    if (gmailTransport) {
+      providers.push(['Gmail SMTP', () => gmailTransport.sendMail({
         from: `"Despacho Sánchez Cerino" <${gmailUser}>`,
         to: recipients.join(','),
         subject,
         html,
-      })
+      })])
     }
+
+    let lastErr
+    for (const [nombre, enviar] of providers) {
+      try {
+        await enviar()
+        return
+      } catch (err) {
+        lastErr = err
+        const motivo = err?.response?.body?.errors?.[0]?.message || err.message
+        console.warn(`Email vía ${nombre} falló (${motivo}). Probando siguiente proveedor…`)
+      }
+    }
+    throw lastErr || new Error('No hay proveedores de correo configurados')
   },
 }
 
