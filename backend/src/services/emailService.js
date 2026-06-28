@@ -16,8 +16,13 @@ const gmailUser = process.env.GMAIL_USER
 const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS
 const gmailTransport = (gmailUser && gmailPass)
   ? nodemailer.createTransport({
-      service: 'gmail',
+      host: 'smtp.gmail.com',
+      port: 465,
+      secure: true,
       auth: { user: gmailUser, pass: gmailPass },
+      // Forzar IPv4: el contenedor de Railway no tiene ruta IPv6 hacia Gmail
+      // (connect ENETUNREACH a 2607:f8b0:...:465). Sin esto el fallback falla.
+      family: 4,
     })
   : null
 
