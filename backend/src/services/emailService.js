@@ -13,7 +13,7 @@ const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'abogadoadmin89@gmail.com'
 //   GMAIL_APP_PASSWORD  → "Contraseña de aplicación" de 16 dígitos (NO la
 //                         contraseña normal; requiere 2FA activo en Gmail)
 const gmailUser = process.env.GMAIL_USER
-const gmailPass = process.env.GMAIL_APP_PASSWORD
+const gmailPass = process.env.GMAIL_APP_PASSWORD || process.env.GMAIL_PASS
 const gmailTransport = (gmailUser && gmailPass)
   ? nodemailer.createTransport({
       service: 'gmail',
