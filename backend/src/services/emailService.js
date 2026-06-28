@@ -1,6 +1,13 @@
 // ── Cliente SendGrid ──────────────────────────────────────────────────
+import dns from 'node:dns'
 import sgMail from '@sendgrid/mail'
 import nodemailer from 'nodemailer'
+
+// El contenedor de Railway NO enruta IPv6 (connect ENETUNREACH a direcciones
+// 2607:f8b0:...). Forzamos que toda resolución DNS prefiera IPv4 para que el
+// fallback Gmail SMTP (smtp.gmail.com) conecte por A-record y no por AAAA.
+dns.setDefaultResultOrder('ipv4first')
+
 sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'abogadoadmin89@gmail.com'
