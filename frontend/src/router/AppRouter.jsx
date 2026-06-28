@@ -22,7 +22,6 @@ import ResetPasswordPage from '../features/auth/ResetPasswordPage'
 import MisCasosPage from '../features/clientportal/MisCasosPage'
 import DocumentosPage from '../features/documents/DocumentosPage'
 import ClientDetail from '../features/clients/ClientDetail'
-import SolicitudesLandingPage from '../features/landing/SolicitudesLandingPage'
 import AvisoPrivacidadPage from '../features/auth/AvisoPrivacidadPage'
 import AuditoriaPage from '../features/audit/AuditoriaPage'
 
@@ -161,11 +160,6 @@ export default function AppRouter() {
         <Route path="/panel/documentos" element={
           <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
             <PanelLayout><DocumentosPage /></PanelLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/panel/solicitudes-landing" element={
-          <ProtectedRoute requiredRoles={['abogado', 'secretario']}>
-            <PanelLayout><SolicitudesLandingPage /></PanelLayout>
           </ProtectedRoute>
         } />
         <Route path="/panel/auditoria" element={

@@ -7,7 +7,7 @@ import { getUsuarios } from '../../features/users/usersService'
 import {
   LayoutDashboard, Users, FolderOpen,
   Calendar, FileText, UserCheck, LogOut,
-  ChevronRight, Shield, Globe
+  ChevronRight, Shield
 } from 'lucide-react'
 import logoSC from '../../assets/logos/logo-sc.png'
 import NotificationBell from '../notifications/NotificationBell'
@@ -23,7 +23,6 @@ const NAV_ITEMS = [
   { label: 'Agenda',      path: '/panel/agenda',             icon: Calendar,        roles: ['abogado', 'secretario'] },
   { label: 'Documentos',  path: '/panel/documentos',         icon: FileText,        roles: ['abogado', 'secretario'] },
   { label: 'Solicitudes', path: '/panel/usuarios-pendientes',icon: UserCheck,       roles: ['abogado', 'secretario'] },
-  { label: 'Landing',     path: '/panel/solicitudes-landing', icon: Globe,           roles: ['abogado', 'secretario'] },
   { label: 'Auditoría',   path: '/panel/auditoria',          icon: Shield,          roles: ['abogado'] },
 ]
 
@@ -40,7 +39,6 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose = () => {}
   const [badgeCasos, setBadgeCasos] = useState(null)
   const [badgeAgenda, setBadgeAgenda] = useState(null)
   const [badgeSolicitudes, setBadgeSolicitudes] = useState(null)
-  const [badgeLanding, setBadgeLanding] = useState(null)
 
   useEffect(() => {
     if (!user?.rol || !['abogado', 'secretario'].includes(user.rol)) return
@@ -59,13 +57,6 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose = () => {}
         const lista = resCitas.value?.data?.citas ?? resCitas.value?.data ?? []
         const pendientes = lista.filter(c => c.estado === 'pendiente').length
         if (pendientes > 0) setBadgeAgenda(pendientes)
-        // Badge landing: citas pendientes con menos de 24 h (badge urgente dorado)
-        const nuevas = lista.filter(c => {
-          if (c.estado !== 'pendiente') return false
-          const diff = Date.now() - new Date(c.createdAt).getTime()
-          return diff < 24 * 60 * 60 * 1000
-        }).length
-        if (nuevas > 0) setBadgeLanding(nuevas)
       }
       if (resUsuarios.status === 'fulfilled') {
         const lista = resUsuarios.value?.data?.usuarios ?? resUsuarios.value?.data ?? []
@@ -325,11 +316,9 @@ export default function Sidebar({ isMobileOpen = false, onMobileClose = () => {}
               path === '/panel/casos'               ? (badgeCasos       || null) :
               path === '/panel/agenda'              ? (badgeAgenda      || null) :
               path === '/panel/usuarios-pendientes' ? (badgeSolicitudes || null) :
-              path === '/panel/solicitudes-landing' ? (badgeLanding     || null) :
               badge ?? null
 
-            const dynamicBadgeUrgent = (path === '/panel/agenda' && badgeAgenda > 0) ||
-                                       (path === '/panel/solicitudes-landing' && badgeLanding > 0)
+            const dynamicBadgeUrgent = (path === '/panel/agenda' && badgeAgenda > 0)
 
             return (
               <NavLink

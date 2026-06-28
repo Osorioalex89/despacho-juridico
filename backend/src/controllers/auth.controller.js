@@ -169,18 +169,14 @@ export const login = async (req, res) => {
 
     await user.update({ otp_code: otp, otp_expires, otp_intentos: 0 })
 
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`\n🔑 [DEV] OTP para ${user.correo}: ${otp}\n`)
-    }
-
     // ── Enviar OTP al correo del usuario ───────────────────────
+    // El código SOLO viaja por correo (sin atajos en dev). Si el envío
+    // falla, no se permite continuar: el OTP es obligatorio.
     try {
       await sendOtpEmail({ to: user.correo, nombre: user.nombre, otp })
     } catch (mailErr) {
       console.error('Error enviando OTP:', mailErr.message)
-      if (process.env.NODE_ENV === 'production') {
-        return res.status(500).json({ message: 'Error enviando el código de verificación. Intenta más tarde.' })
-      }
+      return res.status(500).json({ message: 'Error enviando el código de verificación. Intenta más tarde.' })
     }
 
     // ── tempToken: JWT corto (10 min) para identificar la sesión OTP
